@@ -93,6 +93,25 @@ class SheinCartTest extends TestCase
         $this->assertSame('ordered', $cart->fresh()->status);
     }
 
+    public function test_admin_can_delete_a_cart_from_the_list_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $cart = SheinCart::create([
+            'cart_name' => 'Spring Order',
+            'customer_phone' => '+9677722222',
+            'cart_details' => 'link',
+        ]);
+        $item = $cart->items()->create(['name' => 'شيء', 'item_date' => now()]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-management')
+            ->call('deleteCart', $cart->id);
+
+        $this->assertDatabaseMissing('shein_carts', ['id' => $cart->id]);
+        $this->assertDatabaseMissing('shein_cart_items', ['id' => $item->id]);
+    }
+
     public function test_vendor_cannot_access_cart_management(): void
     {
         $vendor = User::factory()->create(['role' => 'vendor']);
