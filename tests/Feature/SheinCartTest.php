@@ -195,7 +195,7 @@ class SheinCartTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_add_an_item_with_no_description_and_no_link(): void
+    public function test_admin_can_add_an_item_with_no_description(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin']);
         $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
@@ -203,14 +203,30 @@ class SheinCartTest extends TestCase
         Livewire::actingAs($admin)
             ->test('admin.cart-detail', ['cart' => $cart])
             ->set('itemName', '')
-            ->set('itemLink', '')
+            ->set('itemLink', 'https://shein.com/item/1')
             ->set('itemDate', '2026-09-01')
             ->call('addItem')
             ->assertHasNoErrors();
 
         $item = $cart->items()->first();
         $this->assertNull($item->name);
-        $this->assertNull($item->link);
+        $this->assertSame('https://shein.com/item/1', $item->link);
+    }
+
+    public function test_the_link_or_code_is_required_when_adding_an_item(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->set('itemName', 'وصف')
+            ->set('itemLink', '')
+            ->set('itemDate', '2026-09-01')
+            ->call('addItem')
+            ->assertHasErrors('itemLink');
+
+        $this->assertSame(0, $cart->items()->count());
     }
 
     public function test_admin_can_add_and_delete_items_on_a_cart(): void

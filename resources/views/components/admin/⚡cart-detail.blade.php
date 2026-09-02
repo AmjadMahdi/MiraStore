@@ -36,7 +36,7 @@ new class extends Component
 
         $this->validate([
             'itemName' => ['nullable', 'string', 'max:255'],
-            'itemLink' => ['nullable', 'string', 'max:2000'],
+            'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
@@ -79,7 +79,7 @@ new class extends Component
 
         $this->validate([
             'itemName' => ['nullable', 'string', 'max:255'],
-            'itemLink' => ['nullable', 'string', 'max:2000'],
+            'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
@@ -321,7 +321,7 @@ new class extends Component
                                 @error('itemName') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود (اختياري)</label>
+                                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود</label>
                                 <input type="text" wire:model="itemLink" dir="ltr" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                                 @error('itemLink') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
@@ -413,7 +413,7 @@ new class extends Component
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود (اختياري)</label>
+                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود</label>
                 <input type="text" wire:model="itemLink" dir="ltr" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
                 @error('itemLink') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
