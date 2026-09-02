@@ -10,6 +10,12 @@ Route::view('/', 'home')->name('home');
 Route::view('/shein', 'shein.index')->name('shein.index');
 Route::view('/cart', 'shein.cart')->name('shein.cart');
 
+Route::get('/shein/shared/{token}', function (string $token) {
+    $cart = \App\Models\SheinCart::with('items')->where('public_token', $token)->firstOrFail();
+
+    return view('shein.public-cart', ['cart' => $cart]);
+})->name('shein.public-cart');
+
 Route::get('/store/{vendor:slug}', function (\App\Models\User $vendor) {
     abort_unless($vendor->isVendor() && $vendor->is_active, 404);
 

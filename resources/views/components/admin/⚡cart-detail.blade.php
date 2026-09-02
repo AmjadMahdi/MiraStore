@@ -57,6 +57,17 @@ new class extends Component
         $this->cart->refresh();
     }
 
+    public function togglePublicLink(): void
+    {
+        if ($this->cart->public_token) {
+            $this->cart->disablePublicLink();
+        } else {
+            $this->cart->enablePublicLink();
+        }
+
+        $this->cart->refresh();
+    }
+
     public function updateStatus(string $status): void
     {
         abort_unless(in_array($status, SheinCart::STATUSES, true), 422);
@@ -112,7 +123,36 @@ new class extends Component
         >
             {{ $cart->is_locked ? 'إلغاء القفل' : 'قفل السلة' }}
         </button>
+
+        <button
+            type="button"
+            wire:click="togglePublicLink"
+            class="rounded-lg border border-line-medium px-3 py-1.5 text-sm font-medium text-ink-soft"
+        >
+            {{ $cart->public_token ? 'إلغاء الرابط العام' : 'إنشاء رابط عام' }}
+        </button>
     </div>
+
+    @if ($cart->public_token)
+        <div
+            x-data="{ copied: false }"
+            class="mt-3 flex items-center gap-2 rounded-lg bg-surface p-3"
+        >
+            <p class="min-w-0 flex-1 truncate text-xs text-ink-soft" dir="ltr">{{ route('shein.public-cart', $cart->public_token) }}</p>
+            <button
+                type="button"
+                x-on:click="
+                    navigator.clipboard.writeText(@js(route('shein.public-cart', $cart->public_token)));
+                    copied = true;
+                    setTimeout(() => copied = false, 1500);
+                "
+                class="flex-shrink-0 rounded-lg border border-line-medium px-2.5 py-1 text-xs font-medium text-ink-soft"
+            >
+                <span x-show="!copied">نسخ الرابط</span>
+                <span x-show="copied" x-cloak>تم النسخ ✓</span>
+            </button>
+        </div>
+    @endif
 
     @if ($cart->cart_details)
         <div class="mt-6 rounded-lg border border-line-medium p-3">

@@ -241,6 +241,48 @@ class SheinCartTest extends TestCase
         $this->assertFalse($cart->fresh()->is_locked);
     }
 
+    public function test_admin_can_enable_a_public_link_and_it_shows_the_cart(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'رحلتي', 'customer_phone' => '+9677712345', 'cart_details' => '']);
+        $cart->items()->create(['name' => 'فستان', 'item_date' => now()]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('togglePublicLink');
+
+        $cart->refresh();
+        $this->assertNotNull($cart->public_token);
+
+        $this->get(route('shein.public-cart', $cart->public_token))
+            ->assertOk()
+            ->assertSee('رحلتي')
+            ->assertSee($cart->cart_number)
+            ->assertSee('فستان')
+            ->assertDontSee('+9677712345');
+    }
+
+    public function test_disabling_the_public_link_makes_it_404(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enablePublicLink();
+        $token = $cart->public_token;
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('togglePublicLink');
+
+        $this->assertNull($cart->fresh()->public_token);
+
+        $this->get(route('shein.public-cart', $token))->assertNotFound();
+    }
+
+    public function test_an_unknown_public_token_is_404(): void
+    {
+        $this->get(route('shein.public-cart', 'nonexistent-token'))->assertNotFound();
+    }
+
     public function test_customer_phone_must_contain_at_least_one_digit(): void
     {
         Livewire::test('shein.submit-cart')

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Str;
 
 class SheinCart extends Model
 {
@@ -20,6 +21,7 @@ class SheinCart extends Model
         'cart_details',
         'status',
         'is_locked',
+        'public_token',
     ];
 
     protected $attributes = [
@@ -36,6 +38,28 @@ class SheinCart extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SheinCartItem::class);
+    }
+
+    /**
+     * Enable a public, unauthenticated read-only link for this cart,
+     * generating a fresh unguessable token (retrying past a collision).
+     */
+    public function enablePublicLink(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $token = Str::random(40);
+
+            if (! static::where('public_token', $token)->exists()) {
+                $this->update(['public_token' => $token]);
+
+                return;
+            }
+        }
+    }
+
+    public function disablePublicLink(): void
+    {
+        $this->update(['public_token' => null]);
     }
 
     protected static function booted(): void
