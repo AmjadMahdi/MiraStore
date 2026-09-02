@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('shein_cart_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('shein_cart_id')->constrained()->cascadeOnDelete();
-            $table->string('name');
+            $table->string('name')->nullable();
             $table->string('link')->nullable();
             $table->date('item_date');
             $table->timestamps();

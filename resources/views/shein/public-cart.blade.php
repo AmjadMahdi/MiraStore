@@ -43,7 +43,7 @@
                 <div class="mt-2 space-y-2">
                     @foreach ($cart->items as $item)
                         <div class="rounded-lg border border-line-medium p-3">
-                            <p class="text-sm font-medium text-ink">{{ $item->name }}</p>
+                            <p class="text-sm font-medium text-ink">{{ $item->name ?? 'بدون وصف' }}</p>
                             @if ($item->link)
                                 <p class="mt-0.5 truncate text-xs text-muted" dir="ltr">{{ $item->link }}</p>
                             @endif

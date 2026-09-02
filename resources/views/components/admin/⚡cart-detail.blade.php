@@ -35,13 +35,13 @@ new class extends Component
         abort_if($this->cart->is_locked, 403);
 
         $this->validate([
-            'itemName' => ['required', 'string', 'max:255'],
+            'itemName' => ['nullable', 'string', 'max:255'],
             'itemLink' => ['nullable', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
         $this->cart->items()->create([
-            'name' => $this->itemName,
+            'name' => $this->itemName !== '' ? $this->itemName : null,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
         ]);
@@ -57,7 +57,7 @@ new class extends Component
         abort_unless($item->shein_cart_id === $this->cart->id, 403);
 
         $this->editingItemId = $item->id;
-        $this->itemName = $item->name;
+        $this->itemName = (string) $item->name;
         $this->itemLink = (string) $item->link;
         $this->itemDate = $item->item_date->format('Y-m-d');
     }
@@ -78,13 +78,13 @@ new class extends Component
         abort_unless($item->shein_cart_id === $this->cart->id, 403);
 
         $this->validate([
-            'itemName' => ['required', 'string', 'max:255'],
+            'itemName' => ['nullable', 'string', 'max:255'],
             'itemLink' => ['nullable', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
         $item->update([
-            'name' => $this->itemName,
+            'name' => $this->itemName !== '' ? $this->itemName : null,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
         ]);
@@ -316,12 +316,12 @@ new class extends Component
                     @if ($editingItemId === $item->id)
                         <form wire:submit="updateItem" class="space-y-3">
                             <div>
-                                <label class="block text-sm font-medium text-ink-soft">الاسم</label>
+                                <label class="block text-sm font-medium text-ink-soft">الوصف (اختياري)</label>
                                 <input type="text" wire:model="itemName" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                                 @error('itemName') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود</label>
+                                <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود (اختياري)</label>
                                 <input type="text" wire:model="itemLink" dir="ltr" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                                 @error('itemLink') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
@@ -338,7 +338,7 @@ new class extends Component
                     @else
                         <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-ink">{{ $item->name }}</p>
+                                <p class="truncate text-sm font-medium text-ink">{{ $item->name ?? 'بدون وصف' }}</p>
                                 @if ($item->link)
                                     <p class="truncate text-xs text-muted" dir="ltr">{{ $item->link }}</p>
                                 @endif
@@ -407,7 +407,7 @@ new class extends Component
             <h2 class="text-sm font-semibold text-ink-soft">إضافة عنصر</h2>
 
             <div>
-                <label class="block text-sm font-medium text-ink-soft">الاسم</label>
+                <label class="block text-sm font-medium text-ink-soft">الوصف (اختياري)</label>
                 <input type="text" wire:model="itemName" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
                 @error('itemName') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>

@@ -195,6 +195,24 @@ class SheinCartTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_add_an_item_with_no_description_and_no_link(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->set('itemName', '')
+            ->set('itemLink', '')
+            ->set('itemDate', '2026-09-01')
+            ->call('addItem')
+            ->assertHasNoErrors();
+
+        $item = $cart->items()->first();
+        $this->assertNull($item->name);
+        $this->assertNull($item->link);
+    }
+
     public function test_admin_can_add_and_delete_items_on_a_cart(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin']);
