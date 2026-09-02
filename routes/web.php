@@ -8,9 +8,10 @@ use Illuminate\Support\Facades\Route;
 Route::view('/', 'home')->name('home');
 
 Route::view('/shein', 'shein.index')->name('shein.index');
+Route::view('/cart', 'shein.cart')->name('shein.cart');
 
 Route::get('/store/{vendor:slug}', function (\App\Models\User $vendor) {
-    abort_unless($vendor->isVendor(), 404);
+    abort_unless($vendor->isVendor() && $vendor->is_active, 404);
 
     return view('store.show', ['vendor' => $vendor]);
 })->name('store.show');
@@ -47,7 +48,19 @@ Route::middleware(['auth', 'role:vendor'])->prefix('vendor')->name('vendor.')->g
 Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::view('/products', 'admin.products')->name('products.index');
+    Route::view('/products/order', 'admin.products-order')->name('products.order');
+    Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
+        return view('admin.products-edit', ['product' => $product]);
+    })->name('products.edit');
     Route::view('/carts', 'admin.carts')->name('carts.index');
+    Route::view('/carts/main', 'admin.carts-main')->name('carts.main');
     Route::view('/vendors', 'admin.vendors')->name('vendors.index');
+    Route::view('/vendors/create', 'admin.vendors-create')->name('vendors.create');
+    Route::get('/vendors/{vendor}/edit', function (\App\Models\User $vendor) {
+        abort_unless($vendor->isVendor(), 404);
+
+        return view('admin.vendors-edit', ['vendor' => $vendor]);
+    })->name('vendors.edit');
+
     Route::view('/activity', 'admin.activity')->name('activity.index');
 });

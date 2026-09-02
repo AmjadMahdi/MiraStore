@@ -101,4 +101,90 @@ class SheinCartTest extends TestCase
             ->get(route('admin.carts.index'))
             ->assertForbidden();
     }
+
+    public function test_main_cart_combines_codes_from_every_open_cart_only(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        SheinCart::create([
+            'cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => "code-1\ncode-2", 'status' => 'open',
+        ]);
+        SheinCart::create([
+            'cart_name' => 'B', 'customer_phone' => '2', 'cart_details' => 'code-3', 'status' => 'open',
+        ]);
+        SheinCart::create([
+            'cart_name' => 'C', 'customer_phone' => '3', 'cart_details' => 'code-4', 'status' => 'ordered',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.shein-main-cart')
+            ->assertSee('code-1')
+            ->assertSee('code-2')
+            ->assertSee('code-3')
+            ->assertDontSee('code-4');
+    }
+
+    public function test_admin_can_mark_all_open_carts_as_ordered_from_the_main_cart(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $one = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => 'code-1', 'status' => 'open']);
+        $two = SheinCart::create(['cart_name' => 'B', 'customer_phone' => '2', 'cart_details' => 'code-2', 'status' => 'open']);
+        $untouched = SheinCart::create(['cart_name' => 'C', 'customer_phone' => '3', 'cart_details' => 'code-3', 'status' => 'in_transit']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.shein-main-cart')
+            ->call('markAllOrdered');
+
+        $this->assertSame('ordered', $one->fresh()->status);
+        $this->assertSame('ordered', $two->fresh()->status);
+        $this->assertSame('in_transit', $untouched->fresh()->status);
+    }
+
+    public function test_vendor_cannot_access_the_main_cart(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+
+        $this->actingAs($vendor)
+            ->get(route('admin.carts.main'))
+            ->assertForbidden();
+    }
+
+    public function test_customer_phone_must_contain_at_least_one_digit(): void
+    {
+        Livewire::test('shein.submit-cart')
+            ->set('cart_name', 'Test')
+            ->set('cart_details', 'link')
+            ->set('customer_phone', '+ - -')
+            ->call('submit')
+            ->assertHasErrors('customer_phone');
+
+        $this->assertDatabaseMissing('shein_carts', ['cart_name' => 'Test']);
+    }
+
+    public function test_create_with_unique_number_retries_past_a_cart_number_collision(): void
+    {
+        SheinCart::create(['cart_name' => 'Taken', 'customer_phone' => '1', 'cart_details' => 'x', 'cart_number' => 'MIRA-11111']);
+
+        $colliding = new class extends SheinCart
+        {
+            protected $table = 'shein_carts';
+
+            private static int $calls = 0;
+
+            public static function generateCartNumber(): string
+            {
+                static::$calls++;
+
+                return static::$calls === 1 ? 'MIRA-11111' : 'MIRA-22222';
+            }
+        };
+
+        $cart = $colliding::createWithUniqueNumber([
+            'cart_name' => 'Retry Test', 'customer_phone' => '2', 'cart_details' => 'y',
+        ]);
+
+        $this->assertSame('MIRA-22222', $cart->cart_number);
+        $this->assertSame(2, SheinCart::count());
+    }
 }

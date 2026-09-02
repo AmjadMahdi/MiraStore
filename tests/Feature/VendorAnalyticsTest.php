@@ -19,7 +19,7 @@ class VendorAnalyticsTest extends TestCase
 
         Livewire::actingAs($vendor)
             ->test('vendor.analytics')
-            ->assertSee('Premium feature');
+            ->assertSee('بريميوم');
     }
 
     public function test_premium_vendor_sees_view_and_click_counts_per_product(): void

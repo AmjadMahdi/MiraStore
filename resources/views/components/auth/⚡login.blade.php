@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -12,21 +14,36 @@ new class extends Component
     #[Validate('required|string')]
     public string $password = '';
 
+    protected function throttleKey(): string
+    {
+        return Str::lower($this->email).'|'.request()->ip();
+    }
+
     public function login(): void
     {
         $this->validate();
 
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
-            $this->addError('email', 'These credentials do not match our records.');
+        if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            $seconds = RateLimiter::availableIn($this->throttleKey());
+            $this->addError('email', "محاولات كثيرة جداً. يرجى المحاولة مرة أخرى بعد {$seconds} ثانية.");
 
             return;
         }
+
+        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
+            RateLimiter::hit($this->throttleKey(), 60);
+            $this->addError('email', 'بيانات الدخول غير صحيحة.');
+
+            return;
+        }
+
+        RateLimiter::clear($this->throttleKey());
 
         $user = Auth::user();
 
         if (! $user->is_active) {
             Auth::logout();
-            $this->addError('email', 'Your account has been suspended.');
+            $this->addError('email', 'تم إيقاف حسابك.');
 
             return;
         }
@@ -38,34 +55,55 @@ new class extends Component
 };
 ?>
 
-<div class="mx-auto max-w-sm p-6">
-    <h1 class="text-xl font-semibold text-gray-800">Sign in</h1>
+<div class="mx-auto max-w-md p-8">
+    <h1 class="text-2xl font-bold tracking-tight text-ink">تسجيل الدخول</h1>
 
     <form wire:submit="login" class="mt-6 space-y-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" wire:model="email" class="mt-1 w-full rounded-lg border-gray-300 text-sm">
-            @error('email') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            <label class="block text-sm font-medium text-ink-soft">البريد الإلكتروني</label>
+            <input type="email" wire:model="email" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+            @error('email') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
 
         <div>
-            <label class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" wire:model="password" class="mt-1 w-full rounded-lg border-gray-300 text-sm">
-            @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            <label class="block text-sm font-medium text-ink-soft">كلمة المرور</label>
+            <div class="relative mt-1.5" x-data="{ show: false }">
+                <input
+                    :type="show ? 'text' : 'password'"
+                    wire:model="password"
+                    class="w-full rounded-lg border border-line-medium px-3.5 py-2.5 pe-11 text-base focus:border-black focus:ring-1 focus:ring-black"
+                >
+                <button
+                    type="button"
+                    x-on:click="show = !show"
+                    class="absolute inset-y-0 end-0 flex items-center px-3 text-muted"
+                    :aria-label="show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'"
+                >
+                    <svg x-show="!show" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                    </svg>
+                    <svg x-show="show" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
+                        <path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd" />
+                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                    </svg>
+                </button>
+            </div>
+            @error('password') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
 
         <button
             type="submit"
             wire:loading.attr="disabled"
             wire:target="login"
-            class="w-full rounded-lg bg-rose-600 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
         >
-            <span wire:loading.remove wire:target="login">Sign in</span>
-            <span wire:loading wire:target="login">Signing in...</span>
+            <span wire:loading.remove wire:target="login">تسجيل الدخول</span>
+            <span wire:loading wire:target="login">جارٍ تسجيل الدخول...</span>
         </button>
     </form>
 
-    <p class="mt-4 text-center text-sm text-gray-500">
-        Vendor? <a href="{{ route('register') }}" class="font-semibold text-rose-600">Create a store</a>
+    <p class="mt-4 text-center text-sm text-muted">
+        هل أنت تاجر؟ <a href="{{ route('register') }}" class="font-semibold text-primary">أنشئ متجرك</a>
     </p>
 </div>

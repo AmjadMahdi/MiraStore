@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class SheinCart extends Model
 {
@@ -35,5 +36,22 @@ class SheinCart extends Model
         } while (static::where('cart_number', $number)->exists());
 
         return $number;
+    }
+
+    /**
+     * Create a cart, retrying with a fresh cart_number if a concurrent
+     * request wins the race on the same randomly-generated number.
+     */
+    public static function createWithUniqueNumber(array $attributes, int $attempts = 3): self
+    {
+        for ($i = 1; $i <= $attempts; $i++) {
+            try {
+                return static::create($attributes);
+            } catch (UniqueConstraintViolationException $e) {
+                if ($i === $attempts) {
+                    throw $e;
+                }
+            }
+        }
     }
 }

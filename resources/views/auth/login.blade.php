@@ -1,3 +1,3 @@
-<x-layouts.app title="Sign in">
+<x-layouts.app title="تسجيل الدخول">
     <livewire:auth.login />
 </x-layouts.app>

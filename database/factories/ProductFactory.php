@@ -17,6 +17,19 @@ class ProductFactory extends Factory
         '#8b5cf6', '#ec4899', '#14b8a6', '#fb7185',
     ];
 
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product) {
+            $product->images()->create(['path' => $product->image_path, 'sort_order' => 0]);
+
+            $extra = random_int(1, 3);
+
+            for ($i = 1; $i <= $extra; $i++) {
+                $product->images()->create(['path' => static::placeholderImage(), 'sort_order' => $i]);
+            }
+        });
+    }
+
     /**
      * Define the model's default state.
      *

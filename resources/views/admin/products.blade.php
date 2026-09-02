@@ -1,3 +1,3 @@
-<x-layouts.app title="Product Moderation">
+<x-layouts.app title="مراجعة المنتجات">
     <livewire:admin.product-moderation />
 </x-layouts.app>

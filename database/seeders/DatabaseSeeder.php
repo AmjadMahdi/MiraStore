@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use App\Models\InteractionLog;
 use App\Models\Product;
 use App\Models\SheinCart;
@@ -16,14 +17,19 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $admin = User::firstOrCreate(
-            ['email' => 'admin@mirastore.test'],
+            ['email' => 'admin@gmail.com'],
             [
                 'name' => 'Super Admin',
-                'password' => bcrypt('password'),
+                'password' => bcrypt('Admin1234567890#'),
                 'role' => 'super_admin',
                 'max_products_limit' => null,
             ]
         );
+
+        $categories = collect([
+            'ملابس نسائية', 'ملابس رجالية', 'أحذية', 'حقائب',
+            'إكسسوارات', 'مستحضرات تجميل', 'ملابس أطفال',
+        ])->map(fn (string $name) => Category::firstOrCreate(['name' => $name]));
 
         $premiumVendors = User::factory()
             ->count(2)
@@ -44,9 +50,9 @@ class DatabaseSeeder extends Seeder
         $vendors = $premiumVendors->merge($basicVendors)->push($suspendedVendor);
 
         foreach ($vendors as $vendor) {
-            Product::factory()->count(4)->for($vendor, 'vendor')->create();
-            Product::factory()->count(2)->for($vendor, 'vendor')->pending()->create();
-            Product::factory()->for($vendor, 'vendor')->rejected()->create();
+            Product::factory()->count(4)->for($vendor, 'vendor')->create(['category_id' => $categories->random()->id]);
+            Product::factory()->count(2)->for($vendor, 'vendor')->pending()->create(['category_id' => $categories->random()->id]);
+            Product::factory()->for($vendor, 'vendor')->rejected()->create(['category_id' => $categories->random()->id]);
         }
 
         foreach ($premiumVendors as $vendor) {

@@ -56,7 +56,7 @@ class StoreTest extends TestCase
 
         $this->get(route('store.product', [$product->vendor, $product]))
             ->assertOk()
-            ->assertSee('Order via WhatsApp');
+            ->assertSee('اطلب عبر واتساب');
 
         $this->assertDatabaseHas('interaction_logs', [
             'vendor_id' => $product->vendor_id,
@@ -98,5 +98,91 @@ class StoreTest extends TestCase
         $product = $this->approvedProduct(['whatsapp_number' => null]);
 
         $this->get(route('store.product.contact', [$product->vendor, $product]))->assertNotFound();
+    }
+
+    public function test_suspended_vendors_storefront_and_products_are_not_publicly_visible(): void
+    {
+        $product = $this->approvedProduct(['is_active' => false]);
+        $vendor = $product->vendor;
+
+        $this->get(route('store.show', $vendor))->assertNotFound();
+        $this->get(route('store.product', [$vendor, $product]))->assertNotFound();
+        $this->get(route('store.product.contact', [$vendor, $product]))->assertNotFound();
+    }
+
+    public function test_suspended_vendors_products_are_excluded_from_the_homepage_grid(): void
+    {
+        $product = $this->approvedProduct(['is_active' => false]);
+
+        Livewire::test('product-grid')->assertDontSee($product->name);
+    }
+
+    public function test_homepage_grid_card_shows_vendor_name_discount_price_and_whatsapp_button(): void
+    {
+        $vendor = User::factory()->create([
+            'role' => 'vendor', 'store_name' => "Amina's Bakes", 'whatsapp_number' => '+9677700000',
+        ]);
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Cute Tote',
+            'description' => 'A very nice bag',
+            'price' => 19.99,
+            'compare_at_price' => 29.99,
+            'image_path' => 'products/tote.jpg',
+            'status' => 'approved',
+        ]);
+
+        Livewire::test('product-grid')
+            ->assertSee($product->name)
+            ->assertSee($vendor->store_name)
+            ->assertSee('19.99')
+            ->assertSee('29.99')
+            ->assertSee('تواصل عبر واتساب')
+            ->assertSee(route('store.product.contact', [$vendor, $product]), false);
+    }
+
+    public function test_store_grid_card_shows_discount_price_and_whatsapp_button(): void
+    {
+        $vendor = User::factory()->create([
+            'role' => 'vendor', 'store_name' => "Amina's Bakes", 'whatsapp_number' => '+9677700000',
+        ]);
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Cute Tote',
+            'description' => 'A very nice bag',
+            'price' => 19.99,
+            'compare_at_price' => 29.99,
+            'image_path' => 'products/tote.jpg',
+            'status' => 'approved',
+        ]);
+
+        Livewire::test('store.product-grid', ['vendor' => $vendor])
+            ->assertSee('19.99')
+            ->assertSee('29.99')
+            ->assertSee('تواصل عبر واتساب')
+            ->assertSee(route('store.product.contact', [$vendor, $product]), false);
+    }
+
+    public function test_homepage_grid_card_only_rotates_images_when_more_than_one(): void
+    {
+        $single = $this->approvedProduct();
+        $single->images()->create(['path' => $single->image_path, 'sort_order' => 0]);
+
+        $triple = $this->approvedProduct();
+        $triple->images()->create(['path' => $triple->image_path, 'sort_order' => 0]);
+        $triple->images()->create(['path' => 'products/b.jpg', 'sort_order' => 1]);
+        $triple->images()->create(['path' => 'products/c.jpg', 'sort_order' => 2]);
+
+        $html = Livewire::test('product-grid')->html();
+
+        // Only the triple-image card should get the rotation behavior.
+        $this->assertSame(1, substr_count($html, 'setInterval(() => active'));
+        $this->assertStringContainsString('3000)', $html);
+
+        preg_match("/JSON\.parse\('(\[.*?\])'\)/", $html, $match);
+        $this->assertNotEmpty($match);
+        $this->assertSame(3, substr_count($match[1], 'storage'));
     }
 }

@@ -112,4 +112,42 @@ class AuthTest extends TestCase
 
         $this->assertSame('pending', $product->fresh()->status);
     }
+
+    public function test_editing_a_rejected_product_reverts_it_to_pending(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Cute Tote',
+            'description' => 'A bag',
+            'price' => 10,
+            'image_path' => 'products/tote.jpg',
+            'status' => 'rejected',
+            'rejection_reason' => 'Image quality too low',
+        ]);
+
+        $product->update(['image_path' => 'products/tote-v2.jpg']);
+
+        $product->refresh();
+        $this->assertSame('pending', $product->status);
+        $this->assertNull($product->rejection_reason);
+    }
+
+    public function test_login_is_rate_limited_after_five_failed_attempts(): void
+    {
+        $vendor = User::factory()->create(['password' => bcrypt('correct-password')]);
+
+        $component = Livewire::test('auth.login')->set('email', $vendor->email);
+
+        for ($i = 0; $i < 5; $i++) {
+            $component->set('password', 'wrong-password')->call('login');
+        }
+
+        $component->set('password', 'correct-password')
+            ->call('login')
+            ->assertHasErrors('email');
+
+        $this->assertGuest();
+    }
 }

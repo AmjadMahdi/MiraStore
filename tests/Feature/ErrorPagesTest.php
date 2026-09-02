@@ -43,6 +43,6 @@ class ErrorPagesTest extends TestCase
         $this->actingAs($vendor)
             ->get(route('vendor.dashboard'))
             ->assertForbidden()
-            ->assertSee('suspended');
+            ->assertSee('تم إيقاف حسابك');
     }
 }

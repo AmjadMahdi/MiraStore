@@ -31,6 +31,7 @@ class User extends Authenticatable
         'is_active' => true,
         'max_products_limit' => 5,
         'is_verified' => false,
+        'is_platform_store' => false,
     ];
 
     /**
@@ -48,6 +49,7 @@ class User extends Authenticatable
         'is_active',
         'max_products_limit',
         'is_verified',
+        'is_platform_store',
     ];
 
     /**
@@ -72,13 +74,14 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_verified' => 'boolean',
+            'is_platform_store' => 'boolean',
         ];
     }
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['is_active', 'is_verified', 'max_products_limit'])
+            ->logOnly(['is_active', 'is_verified', 'is_platform_store', 'max_products_limit'])
             ->logOnlyDirty();
     }
 

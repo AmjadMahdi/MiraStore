@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('shein_carts', function (Blueprint $table) {
             $table->id();
             $table->string('cart_number')->unique();
-            $table->string('cart_name')->default('My SHEIN Order');
+            $table->string('cart_name')->default('طلبي من شي إن');
             $table->string('customer_phone')->index();
             $table->text('cart_details');
             $table->enum('status', ['open', 'ordered', 'in_transit', 'arrived'])->default('open');

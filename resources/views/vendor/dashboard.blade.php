@@ -5,36 +5,30 @@
     $percent = $limit ? min(100, (int) round($productCount / $limit * 100)) : 0;
 @endphp
 
-<x-layouts.app title="Vendor Dashboard">
-    <div class="mx-auto max-w-2xl p-6">
-        <div class="flex items-center justify-between">
-            <h1 class="text-xl font-semibold text-gray-800">{{ $vendor->store_name }}</h1>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="text-sm text-gray-500 underline">Log out</button>
-            </form>
-        </div>
+<x-layouts.app title="لوحة تحكم التاجر">
+    <div class="mx-auto max-w-2xl p-6 sm:p-8">
+        <h1 class="text-2xl font-bold tracking-tight text-ink">{{ $vendor->store_name }}</h1>
 
-        <div class="mt-6 rounded-lg border border-gray-100 p-4">
-            <p class="text-sm font-medium text-gray-700">Product quota</p>
+        <div class="mt-6 rounded-lg border border-line-medium p-4">
+            <p class="text-sm font-medium text-ink-soft">حصة المنتجات</p>
 
             @if ($limit)
-                <div class="mt-2 h-2 w-full rounded-full bg-gray-100">
-                    <div class="h-2 rounded-full bg-rose-600" style="width: {{ $percent }}%"></div>
+                <div class="mt-2 h-2 w-full rounded-full bg-surface" dir="ltr">
+                    <div class="h-2 rounded-full bg-primary" style="width: {{ $percent }}%"></div>
                 </div>
-                <p class="mt-1 text-xs text-gray-500">{{ $productCount }} / {{ $limit }} products used</p>
+                <p class="mt-1 text-xs text-muted">تم استخدام {{ $productCount }} / {{ $limit }} منتج</p>
             @else
-                <p class="mt-1 text-xs text-gray-500">{{ $productCount }} products — unlimited (Premium)</p>
+                <p class="mt-1 text-xs text-muted">{{ $productCount }} منتج — غير محدود (بريميوم)</p>
             @endif
 
             @if ($vendor->is_verified)
-                <span class="mt-2 inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">Verified Seller</span>
+                <span class="mt-2 inline-block rounded bg-primary px-2 py-0.5 text-xs text-white">بائع موثّق</span>
             @endif
         </div>
 
         @if ($vendor->slug)
-            <a href="{{ route('store.show', $vendor) }}" class="mt-3 block text-center text-sm text-gray-500 underline">
-                View my public store
+            <a href="{{ route('store.show', $vendor) }}" class="mt-3 block text-center text-sm text-muted underline">
+                عرض متجري العام
             </a>
         @endif
     </div>

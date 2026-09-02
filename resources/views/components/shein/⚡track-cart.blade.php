@@ -24,7 +24,7 @@ new class extends Component
         $key = 'shein-tracking:'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('cart_number', 'Too many attempts. Please try again in a minute.');
+            $this->addError('cart_number', 'محاولات كثيرة جداً. يرجى المحاولة مرة أخرى بعد دقيقة.');
 
             return;
         }
@@ -45,71 +45,77 @@ new class extends Component
 };
 ?>
 
-<div class="mx-auto max-w-md p-6">
+<div class="mx-auto max-w-md p-6 sm:p-8">
     @if ($cart)
         @php
             $steps = \App\Models\SheinCart::STATUSES;
+            $stepLabels = [
+                'open' => 'مفتوحة',
+                'ordered' => 'تم الطلب',
+                'in_transit' => 'في الطريق',
+                'arrived' => 'تم الوصول',
+            ];
             $currentIndex = array_search($cart->status, $steps);
         @endphp
 
         <div>
-            <p class="text-sm text-gray-500">{{ $cart->cart_name }} &middot; {{ $cart->cart_number }}</p>
+            <p class="text-sm text-muted">{{ $cart->cart_name }} &middot; {{ $cart->cart_number }}</p>
 
             <div class="mt-4 flex items-center justify-between">
                 @foreach ($steps as $i => $step)
                     <div class="flex flex-1 flex-col items-center">
                         <div @class([
                             'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
-                            'bg-rose-600 text-white' => $i <= $currentIndex,
-                            'bg-gray-200 text-gray-400' => $i > $currentIndex,
+                            'bg-primary text-white' => $i <= $currentIndex,
+                            'bg-line-medium text-disabled' => $i > $currentIndex,
                         ])>
                             {{ $i + 1 }}
                         </div>
-                        <p class="mt-1 text-center text-xs capitalize text-gray-500">{{ str_replace('_', ' ', $step) }}</p>
+                        <p class="mt-1 text-center text-xs text-muted">{{ $stepLabels[$step] }}</p>
                     </div>
 
                     @if (! $loop->last)
                         <div @class([
                             'h-0.5 flex-1',
-                            'bg-rose-600' => $i < $currentIndex,
-                            'bg-gray-200' => $i >= $currentIndex,
+                            'bg-primary' => $i < $currentIndex,
+                            'bg-line-medium' => $i >= $currentIndex,
                         ])></div>
                     @endif
                 @endforeach
             </div>
         </div>
 
-        <button type="button" wire:click="reset_" class="mt-6 text-sm text-gray-500 underline">
-            Track another cart
+        <button type="button" wire:click="reset_" class="mt-6 text-sm text-muted underline">
+            تتبع سلة أخرى
         </button>
     @else
         <form wire:submit="track" class="space-y-4">
-            <h2 class="text-lg font-semibold text-gray-800">Track your order</h2>
+            <h2 class="text-lg font-semibold text-ink">تتبع طلبك</h2>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Phone number</label>
-                <input type="text" wire:model="customer_phone" class="mt-1 w-full rounded-lg border-gray-300 text-sm">
-                @error('customer_phone') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                <label class="block text-sm font-medium text-ink-soft">رقم الهاتف</label>
+                <input type="text" wire:model="customer_phone" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+                @error('customer_phone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Cart number</label>
-                <input type="text" wire:model="cart_number" placeholder="MIRA-12345" class="mt-1 w-full rounded-lg border-gray-300 text-sm">
-                @error('cart_number') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                <label class="block text-sm font-medium text-ink-soft">رقم السلة</label>
+                <input type="text" wire:model="cart_number" placeholder="MIRA-12345" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black" dir="ltr">
+                @error('cart_number') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
 
             @if ($notFound)
-                <p class="text-sm text-red-600">No matching order found.</p>
+                <p class="text-sm text-discount">لم يتم العثور على طلب مطابق.</p>
             @endif
 
             <button
                 type="submit"
                 wire:loading.attr="disabled"
                 wire:target="track"
-                class="w-full rounded-lg bg-rose-600 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
             >
-                <span wire:loading.remove wire:target="track">Track</span>
-                <span wire:loading wire:target="track">Tracking...</span>
+                <span wire:loading.remove wire:target="track">تتبع</span>
+                <span wire:loading wire:target="track">جارٍ التتبع...</span>
             </button>
         </form>
     @endif

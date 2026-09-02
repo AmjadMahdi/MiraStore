@@ -30,12 +30,12 @@ new class extends Component
 };
 ?>
 
-<div class="mx-auto max-w-2xl p-6">
-    <h1 class="text-xl font-semibold text-gray-800">Analytics</h1>
+<div class="mx-auto max-w-2xl p-6 sm:p-8">
+    <h1 class="text-2xl font-bold tracking-tight text-ink">التحليلات</h1>
 
     @if (! $isPremium)
-        <div class="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-700">
-            Advanced analytics (views and WhatsApp click-through rates) are a Premium feature. Upgrade your subscription to unlock them.
+        <div class="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-warning">
+            التحليلات المتقدمة (المشاهدات ومعدل النقر على واتساب) ميزة حصرية لباقة بريميوم. قم بترقية اشتراكك لفتحها.
         </div>
     @else
         <div class="mt-6 space-y-3">
@@ -46,26 +46,26 @@ new class extends Component
                         : 0;
                 @endphp
 
-                <div class="rounded-lg border border-gray-100 p-3">
-                    <p class="text-sm font-medium text-gray-800">{{ $product->name }}</p>
+                <div class="rounded-lg border border-line-medium p-3">
+                    <p class="text-sm font-medium text-ink">{{ $product->name }}</p>
 
                     <div class="mt-2 grid grid-cols-3 gap-2 text-center">
                         <div>
-                            <p class="text-lg font-semibold text-rose-600">{{ $product->views_count }}</p>
-                            <p class="text-xs text-gray-500">Views</p>
+                            <p class="text-lg font-semibold text-primary">{{ $product->views_count }}</p>
+                            <p class="text-xs text-muted">مشاهدات</p>
                         </div>
                         <div>
-                            <p class="text-lg font-semibold text-rose-600">{{ $product->whatsapp_clicks_count }}</p>
-                            <p class="text-xs text-gray-500">WhatsApp clicks</p>
+                            <p class="text-lg font-semibold text-primary">{{ $product->whatsapp_clicks_count }}</p>
+                            <p class="text-xs text-muted">نقرات واتساب</p>
                         </div>
                         <div>
-                            <p class="text-lg font-semibold text-rose-600">{{ $ctr }}%</p>
-                            <p class="text-xs text-gray-500">Click-through</p>
+                            <p class="text-lg font-semibold text-primary">{{ $ctr }}%</p>
+                            <p class="text-xs text-muted">معدل النقر</p>
                         </div>
                     </div>
                 </div>
             @empty
-                <p class="py-10 text-center text-sm text-gray-400">No products yet.</p>
+                <p class="py-10 text-center text-sm text-disabled">لا توجد منتجات بعد.</p>
             @endforelse
         </div>
     @endif

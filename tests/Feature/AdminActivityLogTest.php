@@ -32,7 +32,7 @@ class AdminActivityLogTest extends TestCase
         Livewire::actingAs($admin)
             ->test('admin.activity-log')
             ->assertSee('Product')
-            ->assertSee('updated');
+            ->assertSee('عدّل');
 
         $this->assertDatabaseHas('activity_log', [
             'subject_type' => Product::class,
@@ -75,7 +75,7 @@ class AdminActivityLogTest extends TestCase
         Livewire::actingAs($admin)
             ->test('admin.activity-log')
             ->set('eventFilter', 'deleted')
-            ->assertSee('deleted');
+            ->assertSee('حذف');
     }
 
     public function test_vendor_cannot_access_activity_log(): void

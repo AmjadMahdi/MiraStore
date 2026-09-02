@@ -19,7 +19,7 @@ class EnsureUserHasRole
 
         abort_if(! $user || ! in_array($user->role, $roles, true), 403);
 
-        abort_if(! $user->is_active, 403, 'Your account has been suspended.');
+        abort_if(! $user->is_active, 403, 'تم إيقاف حسابك.');
 
         return $next($request);
     }
