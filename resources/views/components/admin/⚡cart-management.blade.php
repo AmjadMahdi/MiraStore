@@ -27,6 +27,7 @@ new class extends Component
         return [
             'carts' => SheinCart::query()
                 ->where('status', $this->statusFilter)
+                ->withCount('items')
                 ->latest()
                 ->paginate(10),
         ];
@@ -48,6 +49,10 @@ new class extends Component
         <h1 class="text-2xl font-bold tracking-tight text-ink">سلال شي إن</h1>
 
         <div class="flex items-center gap-2">
+            <a href="{{ route('admin.carts.create') }}" class="flex-shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-hover">
+                + سلة جديدة
+            </a>
+
             <a href="{{ route('admin.carts.main') }}" class="flex-shrink-0 rounded-lg border border-line-medium px-3 py-1.5 text-sm font-medium text-ink-soft">
                 السلة الرئيسية
             </a>
@@ -65,8 +70,14 @@ new class extends Component
             <div class="rounded-lg border border-line-medium p-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-ink">{{ $cart->cart_name }} &middot; {{ $cart->cart_number }}</p>
-                        <p class="text-sm text-muted">{{ $cart->customer_phone }}</p>
+                        <p class="text-sm font-medium text-ink">
+                            <a href="{{ route('admin.carts.show', $cart) }}" class="underline-offset-2 hover:underline">{{ $cart->cart_name }}</a>
+                            &middot; {{ $cart->cart_number }}
+                            @if ($cart->is_locked)
+                                <span class="ms-1 rounded bg-discount-light px-1.5 py-0.5 text-xs font-medium text-discount">مقفلة</span>
+                            @endif
+                        </p>
+                        <p class="text-sm text-muted">{{ $cart->customer_phone }} &middot; {{ $cart->items_count }} عنصر</p>
                     </div>
 
                     <select

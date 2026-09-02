@@ -54,6 +54,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
     })->name('products.edit');
     Route::view('/carts', 'admin.carts')->name('carts.index');
     Route::view('/carts/main', 'admin.carts-main')->name('carts.main');
+    Route::view('/carts/create', 'admin.carts-create')->name('carts.create');
+    Route::get('/carts/{cart}', function (\App\Models\SheinCart $cart) {
+        return view('admin.carts-show', ['cart' => $cart]);
+    })->name('carts.show');
+    Route::view('/categories', 'admin.categories')->name('categories.index');
     Route::view('/vendors', 'admin.vendors')->name('vendors.index');
     Route::view('/vendors/create', 'admin.vendors-create')->name('vendors.create');
     Route::get('/vendors/{vendor}/edit', function (\App\Models\User $vendor) {

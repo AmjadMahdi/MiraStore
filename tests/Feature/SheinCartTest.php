@@ -150,6 +150,97 @@ class SheinCartTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_vendor_cannot_create_or_view_admin_carts(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+
+        $this->actingAs($vendor)->get(route('admin.carts.create'))->assertForbidden();
+        $this->actingAs($vendor)->get(route('admin.carts.show', $cart))->assertForbidden();
+    }
+
+    public function test_admin_can_create_a_new_cart_from_scratch(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-form')
+            ->set('cart_name', 'طلب هاتفي')
+            ->set('customer_phone', '+9677700000')
+            ->call('save')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('shein_carts', [
+            'cart_name' => 'طلب هاتفي',
+            'customer_phone' => '+9677700000',
+        ]);
+    }
+
+    public function test_admin_can_add_and_delete_items_on_a_cart(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+
+        $component = Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->set('itemName', 'فستان أزرق')
+            ->set('itemLink', 'https://shein.com/item/1')
+            ->set('itemDate', '2026-09-01')
+            ->call('addItem');
+
+        $this->assertDatabaseHas('shein_cart_items', [
+            'shein_cart_id' => $cart->id,
+            'name' => 'فستان أزرق',
+            'link' => 'https://shein.com/item/1',
+        ]);
+
+        $item = $cart->items()->first();
+
+        $component->call('deleteItem', $item->id);
+
+        $this->assertDatabaseMissing('shein_cart_items', ['id' => $item->id]);
+    }
+
+    public function test_locking_a_cart_prevents_adding_or_deleting_items(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+        $item = $cart->items()->create(['name' => 'قديم', 'item_date' => now()]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('toggleLock');
+
+        $this->assertTrue($cart->fresh()->is_locked);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->set('itemName', 'جديد')
+            ->set('itemDate', '2026-09-01')
+            ->call('addItem')
+            ->assertForbidden();
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('deleteItem', $item->id)
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('shein_cart_items', ['id' => $item->id]);
+        $this->assertSame(1, $cart->items()->count());
+    }
+
+    public function test_unlocking_a_cart_allows_items_again(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '', 'is_locked' => true]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('toggleLock');
+
+        $this->assertFalse($cart->fresh()->is_locked);
+    }
+
     public function test_customer_phone_must_contain_at_least_one_digit(): void
     {
         Livewire::test('shein.submit-cart')

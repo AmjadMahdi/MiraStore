@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 class SheinCart extends Model
@@ -18,7 +19,24 @@ class SheinCart extends Model
         'customer_phone',
         'cart_details',
         'status',
+        'is_locked',
     ];
+
+    protected $attributes = [
+        'is_locked' => false,
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_locked' => 'boolean',
+        ];
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(SheinCartItem::class);
+    }
 
     protected static function booted(): void
     {

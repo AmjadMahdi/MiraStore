@@ -49,29 +49,51 @@ new class extends Component
 ?>
 
 <div>
-    <div class="sticky top-0 z-10 space-y-2 bg-white/90 backdrop-blur px-4 py-3 shadow-sm">
-        <input
-            type="search"
-            wire:model.live.debounce.300ms="search"
-            placeholder="ابحث عن منتج..."
-            class="w-full rounded-lg border border-line-medium px-4 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
-        >
-        <select
-            wire:model.live="categoryId"
-            class="w-full rounded-lg border border-line-medium px-4 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
-        >
-            <option value="">كل الفئات</option>
-            @foreach ($categories as $category)
-                <option value="{{ $category->id }}">{{ $category->name }}</option>
-            @endforeach
-        </select>
+    <div class="sticky top-0 z-10 bg-white/90 backdrop-blur shadow-sm">
+        <div class="mx-auto max-w-6xl space-y-2 px-4 py-3">
+            <input
+                type="search"
+                wire:model.live.debounce.300ms="search"
+                placeholder="ابحث عن منتج..."
+                class="w-full rounded-lg border border-line-medium px-4 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+            >
+            <div class="no-scrollbar flex gap-2 overflow-x-auto">
+                <button
+                    type="button"
+                    wire:click="$set('categoryId', '')"
+                    @class([
+                        'flex-shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition',
+                        'border-primary bg-primary text-white' => $categoryId === '',
+                        'border-line-medium text-ink-soft hover:bg-surface' => $categoryId !== '',
+                    ])
+                >
+                    كل الفئات
+                </button>
+
+                @foreach ($categories as $category)
+                    <button
+                        type="button"
+                        wire:click="$set('categoryId', '{{ $category->id }}')"
+                        @class([
+                            'flex-shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-medium transition',
+                            'border-primary bg-primary text-white' => (string) $categoryId === (string) $category->id,
+                            'border-line-medium text-ink-soft hover:bg-surface' => (string) $categoryId !== (string) $category->id,
+                        ])
+                    >
+                        {{ $category->name }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
     </div>
 
-    <div class="rounded-lg bg-surface mx-4 mt-4 p-4 text-sm text-ink">
-        اطلب سلة شي إن بدون عمولة اليوم! <a href="{{ route('shein.index') }}" class="font-semibold underline">ابدأ الآن &larr;</a>
+    <div class="mx-auto max-w-6xl px-4">
+        <div class="mt-4 rounded-lg bg-surface p-4 text-sm text-ink">
+            اطلب سلة شي إن بدون عمولة اليوم! <a href="{{ route('shein.index') }}" class="font-semibold underline">ابدأ الآن &larr;</a>
+        </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4" wire:loading.class="opacity-50">
+    <div class="mx-auto grid max-w-6xl grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4" wire:loading.class="opacity-50">
         @forelse ($products as $product)
             @php
                 $imageUrls = $product->images->isNotEmpty()
@@ -166,7 +188,7 @@ new class extends Component
         @endforelse
     </div>
 
-    <div class="px-4 pb-4">
+    <div class="mx-auto max-w-6xl px-4 pb-4">
         {{ $products->links() }}
     </div>
 </div>

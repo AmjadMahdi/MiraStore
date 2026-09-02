@@ -186,4 +186,31 @@ class StoreTest extends TestCase
         $this->assertNotEmpty($match);
         $this->assertSame(3, substr_count($match[1], 'storage'));
     }
+
+    public function test_homepage_shows_all_categories_as_tabs_and_filters_by_them(): void
+    {
+        $shoes = \App\Models\Category::create(['name' => 'Shoes']);
+        $bags = \App\Models\Category::create(['name' => 'Bags']);
+
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => $shoes->id,
+            'name' => 'Cute Tote',
+            'description' => 'd',
+            'price' => 10,
+            'image_path' => 'products/tote.jpg',
+            'status' => 'approved',
+        ]);
+
+        Livewire::test('product-grid')
+            ->assertSee('كل الفئات')
+            ->assertSee($shoes->name)
+            ->assertSee($bags->name)
+            ->assertSee($product->name)
+            ->set('categoryId', (string) $bags->id)
+            ->assertDontSee($product->name)
+            ->set('categoryId', (string) $shoes->id)
+            ->assertSee($product->name);
+    }
 }
