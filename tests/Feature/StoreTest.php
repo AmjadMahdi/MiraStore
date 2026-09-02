@@ -138,6 +138,7 @@ class StoreTest extends TestCase
             ->assertSee($vendor->store_name)
             ->assertSee('19.99')
             ->assertSee('29.99')
+            ->assertSee('-33%')
             ->assertSee('تواصل عبر واتساب')
             ->assertSee(route('store.product.contact', [$vendor, $product]), false);
     }

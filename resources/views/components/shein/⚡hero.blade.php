@@ -24,7 +24,21 @@ new class extends Component
 };
 ?>
 
+@vite('resources/js/nebula-shader.js')
+
 <div class="relative flex min-h-[70vh] items-center overflow-hidden bg-primary px-4 py-12">
+    {{-- WebGL nebula background; wire:ignore so Livewire re-renders (typing/submitting below) never tear down the canvas --}}
+    <div
+        wire:ignore
+        class="absolute inset-0 z-0"
+        aria-hidden="true"
+        x-data
+        x-init="
+            const cleanup = window.mountNebulaShader($el);
+            document.addEventListener('livewire:navigating', cleanup, { once: true });
+        "
+    ></div>
+
     {{-- Decorative floating shopping/product icons --}}
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
         {{-- Shopping bag --}}
