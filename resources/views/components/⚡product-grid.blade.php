@@ -41,6 +41,7 @@ new class extends Component
                 ->orderByRaw('case when vendor_tier.is_platform_store then 0 when vendor_tier.is_verified then 1 else 2 end')
                 ->orderBy('products.display_order')
                 ->orderByDesc('products.created_at')
+                ->orderByDesc('products.id')
                 ->paginate(12),
         ];
     }

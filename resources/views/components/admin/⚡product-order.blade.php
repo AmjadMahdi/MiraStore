@@ -28,6 +28,7 @@ new class extends Component
             ->orderByDesc('is_pinned')
             ->orderBy('display_order')
             ->latest()
+            ->orderByDesc('id')
             ->pluck('id')
             ->all();
     }

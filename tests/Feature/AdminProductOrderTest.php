@@ -46,14 +46,17 @@ class AdminProductOrderTest extends TestCase
         $two = $this->approvedProduct('Two');
         $three = $this->approvedProduct('Three');
 
+        // With every tiebreak equal (display_order, created_at), the list is
+        // deterministically newest-first (highest id first) — matching the
+        // "latest()" convention used everywhere else in the app.
         Livewire::actingAs($admin)
             ->test('admin.product-order')
-            ->assertSet('orderedIds', [$one->id, $two->id, $three->id])
+            ->assertSet('orderedIds', [$three->id, $two->id, $one->id])
             ->call('moveItem', 2, 0)
-            ->assertSet('orderedIds', [$three->id, $one->id, $two->id]);
+            ->assertSet('orderedIds', [$one->id, $three->id, $two->id]);
 
-        $this->assertSame(0, $three->fresh()->display_order);
-        $this->assertSame(1, $one->fresh()->display_order);
+        $this->assertSame(0, $one->fresh()->display_order);
+        $this->assertSame(1, $three->fresh()->display_order);
         $this->assertSame(2, $two->fresh()->display_order);
     }
 
@@ -124,13 +127,14 @@ class AdminProductOrderTest extends TestCase
         $two = $this->approvedProduct('Two');
         $three = $this->approvedProduct('Three');
 
+        // Newest-first by default; pin the oldest ("One") and confirm it jumps to the front.
         Livewire::actingAs($admin)
             ->test('admin.product-order')
-            ->assertSet('orderedIds', [$one->id, $two->id, $three->id])
-            ->call('togglePin', $three->id)
-            ->assertSet('orderedIds', [$three->id, $one->id, $two->id]);
+            ->assertSet('orderedIds', [$three->id, $two->id, $one->id])
+            ->call('togglePin', $one->id)
+            ->assertSet('orderedIds', [$one->id, $three->id, $two->id]);
 
-        $this->assertTrue($three->fresh()->is_pinned);
+        $this->assertTrue($one->fresh()->is_pinned);
     }
 
     public function test_admin_can_unpin_a_product(): void
