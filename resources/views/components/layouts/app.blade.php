@@ -10,7 +10,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/nebula-shader.js'])
 
         @livewireStyles
     </head>
@@ -34,8 +34,6 @@
                 </div>
 
                 <div class="flex items-center gap-3 text-sm sm:gap-4">
-                    <livewire:shein.cart-badge />
-
                     @auth
                         <a href="{{ auth()->user()->isSuperAdmin() ? route('admin.dashboard') : route('vendor.dashboard') }}" class="text-muted hover:text-primary">
                             {{ __('لوحة التحكم') }}
@@ -87,6 +85,7 @@
                             'admin.vendors.index' => __('التجّار'),
                             'admin.carts.index' => __('سلال شي إن'),
                             'admin.activity.index' => __('سجل النشاط'),
+                            'admin.settings.index' => __('الإعدادات'),
                         ] as $route => $label)
                             <a
                                 href="{{ route($route) }}"

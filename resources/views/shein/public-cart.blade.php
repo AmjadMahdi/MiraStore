@@ -50,7 +50,7 @@
                             @if ($item->link)
                                 <p class="mt-0.5 truncate text-xs text-muted" dir="ltr">{{ $item->link }}</p>
                             @endif
-                            <p class="mt-0.5 text-xs text-disabled">{{ $item->item_date->format('Y-m-d') }}</p>
+                            <p class="mt-0.5 text-xs text-disabled">{{ $item->item_date->format('Y-m-d H:i') }}</p>
                         </div>
                     @endforeach
                 </div>

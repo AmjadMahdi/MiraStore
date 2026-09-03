@@ -23,22 +23,41 @@ class SheinCart extends Model
         'status',
         'is_locked',
         'public_token',
+        'accepts_submissions',
     ];
 
     protected $attributes = [
         'is_locked' => false,
+        'accepts_submissions' => false,
     ];
 
     protected function casts(): array
     {
         return [
             'is_locked' => 'boolean',
+            'accepts_submissions' => 'boolean',
         ];
     }
 
     public function items(): HasMany
     {
         return $this->hasMany(SheinCartItem::class);
+    }
+
+    /**
+     * Mark this cart as the one open cart that public homepage submissions
+     * (via the Hero "Add Link" flow) go into, unmarking any other cart that
+     * previously held that role — only one cart can accept submissions at a time.
+     */
+    public function enableSubmissions(): void
+    {
+        static::where('id', '!=', $this->id)->update(['accepts_submissions' => false]);
+        $this->update(['accepts_submissions' => true]);
+    }
+
+    public function disableSubmissions(): void
+    {
+        $this->update(['accepts_submissions' => false]);
     }
 
     /**

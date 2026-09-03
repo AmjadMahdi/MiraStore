@@ -15,6 +15,7 @@ class SheinCartItem extends Model
         'name',
         'quantity',
         'link',
+        'customer_phone',
         'item_date',
     ];
 
@@ -26,7 +27,7 @@ class SheinCartItem extends Model
     {
         return [
             'quantity' => 'integer',
-            'item_date' => 'date',
+            'item_date' => 'datetime',
         ];
     }
 

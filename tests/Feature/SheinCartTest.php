@@ -136,54 +136,6 @@ class SheinCartTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_main_cart_combines_codes_from_every_open_cart_only(): void
-    {
-        $admin = User::factory()->create(['role' => 'super_admin']);
-
-        SheinCart::create([
-            'cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => "code-1\ncode-2", 'status' => 'open',
-        ]);
-        SheinCart::create([
-            'cart_name' => 'B', 'customer_phone' => '2', 'cart_details' => 'code-3', 'status' => 'open',
-        ]);
-        SheinCart::create([
-            'cart_name' => 'C', 'customer_phone' => '3', 'cart_details' => 'code-4', 'status' => 'ordered',
-        ]);
-
-        Livewire::actingAs($admin)
-            ->test('admin.shein-main-cart')
-            ->assertSee('code-1')
-            ->assertSee('code-2')
-            ->assertSee('code-3')
-            ->assertDontSee('code-4');
-    }
-
-    public function test_admin_can_mark_all_open_carts_as_ordered_from_the_main_cart(): void
-    {
-        $admin = User::factory()->create(['role' => 'super_admin']);
-
-        $one = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => 'code-1', 'status' => 'open']);
-        $two = SheinCart::create(['cart_name' => 'B', 'customer_phone' => '2', 'cart_details' => 'code-2', 'status' => 'open']);
-        $untouched = SheinCart::create(['cart_name' => 'C', 'customer_phone' => '3', 'cart_details' => 'code-3', 'status' => 'in_transit']);
-
-        Livewire::actingAs($admin)
-            ->test('admin.shein-main-cart')
-            ->call('markAllOrdered');
-
-        $this->assertSame('ordered', $one->fresh()->status);
-        $this->assertSame('ordered', $two->fresh()->status);
-        $this->assertSame('in_transit', $untouched->fresh()->status);
-    }
-
-    public function test_vendor_cannot_access_the_main_cart(): void
-    {
-        $vendor = User::factory()->create(['role' => 'vendor']);
-
-        $this->actingAs($vendor)
-            ->get(route('admin.carts.main'))
-            ->assertForbidden();
-    }
-
     public function test_vendor_cannot_create_or_view_admin_carts(): void
     {
         $vendor = User::factory()->create(['role' => 'vendor']);
@@ -201,14 +153,15 @@ class SheinCartTest extends TestCase
             ->test('admin.cart-form')
             ->set('cart_name', 'طلب هاتفي')
             ->set('description', 'طلب من زبون عبر الهاتف')
-            ->set('customer_phone', '+9677700000')
+            ->set('customer_country_code', '+966')
+            ->set('customer_phone', '511234567')
             ->call('save')
             ->assertRedirect();
 
         $this->assertDatabaseHas('shein_carts', [
             'cart_name' => 'طلب هاتفي',
             'description' => 'طلب من زبون عبر الهاتف',
-            'customer_phone' => '+9677700000',
+            'customer_phone' => '+966 511234567',
         ]);
     }
 
@@ -317,14 +270,27 @@ class SheinCartTest extends TestCase
             ->call('startEditCartDetails')
             ->set('editCartName', 'اسم جديد')
             ->set('editDescription', 'وصف جديد')
-            ->set('editCustomerPhone', '+9677711111')
+            ->set('editCustomerCountryCode', '+966')
+            ->set('editCustomerPhone', '511234567')
             ->call('updateCartDetails')
             ->assertSet('editingCartDetails', false);
 
         $cart->refresh();
         $this->assertSame('اسم جديد', $cart->cart_name);
         $this->assertSame('وصف جديد', $cart->description);
-        $this->assertSame('+9677711111', $cart->customer_phone);
+        $this->assertSame('+966 511234567', $cart->customer_phone);
+    }
+
+    public function test_editing_cart_phone_correctly_parses_the_existing_country_code(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'قديمة', 'customer_phone' => '+966 511234567', 'cart_details' => '']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('startEditCartDetails')
+            ->assertSet('editCustomerCountryCode', '+966')
+            ->assertSet('editCustomerPhone', '511234567');
     }
 
     public function test_admin_can_delete_a_cart_entirely(): void
@@ -380,6 +346,24 @@ class SheinCartTest extends TestCase
             ->call('toggleLock');
 
         $this->assertFalse($cart->fresh()->is_locked);
+    }
+
+    public function test_admin_can_toggle_accepts_submissions_from_the_cart_detail_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $cart = SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('toggleAcceptsSubmissions');
+
+        $this->assertTrue($cart->fresh()->accepts_submissions);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-detail', ['cart' => $cart])
+            ->call('toggleAcceptsSubmissions');
+
+        $this->assertFalse($cart->fresh()->accepts_submissions);
     }
 
     public function test_admin_can_enable_a_public_link_and_it_shows_the_cart(): void

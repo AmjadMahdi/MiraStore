@@ -1,11 +1,18 @@
 <?php
 
-use App\Support\GuestCart;
+use App\Models\SheinCart;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 new class extends Component
 {
+    #[Locked]
+    public string $customerCountryCode = '+967';
+
+    #[Validate('required|string|max:15|regex:/^[0-9\s-]+$/')]
+    public string $customerPhone = '';
+
     #[Validate('required|string|max:2000')]
     public string $link = '';
 
@@ -13,27 +20,57 @@ new class extends Component
     public string $quantity = '1';
 
     #[Validate('nullable|string|max:1000')]
-    public string $notes = '';
+    public string $specifications = '';
 
     public bool $justAdded = false;
 
+    /**
+     * Resolved fresh on every request (mount, and again on every subsequent
+     * interaction) rather than cached once — so if the admin switches which
+     * cart accepts submissions while a customer already has the page open,
+     * their next submission still lands in whichever cart is active *now*,
+     * not whichever was active when the page first loaded.
+     */
+    protected function activeCart(): ?SheinCart
+    {
+        return SheinCart::where('accepts_submissions', true)->first();
+    }
+
     public function addToCart(): void
     {
+        $cart = $this->activeCart();
+
+        abort_unless($cart, 404);
+        abort_if($cart->is_locked, 403);
+
         $this->validate();
 
-        GuestCart::add($this->link, (int) $this->quantity, $this->notes !== '' ? $this->notes : null);
+        $cart->items()->create([
+            'name' => $this->specifications !== '' ? $this->specifications : null,
+            'link' => $this->link,
+            'quantity' => (int) $this->quantity,
+            'customer_phone' => $this->customerCountryCode.' '.$this->customerPhone,
+            'item_date' => now(),
+        ]);
 
         $this->link = '';
         $this->quantity = '1';
-        $this->notes = '';
+        $this->specifications = '';
         $this->justAdded = true;
-        $this->dispatch('cart-updated');
         $this->dispatch('link-added');
+    }
+
+    public function with(): array
+    {
+        $cart = $this->activeCart();
+
+        return [
+            'activeCart' => $cart,
+            'adminWhatsappLink' => $cart ? 'https://wa.me/'.preg_replace('/\D/', '', $cart->customer_phone) : null,
+        ];
     }
 };
 ?>
-
-@vite('resources/js/nebula-shader.js')
 
 <div class="relative flex min-h-[70vh] items-center overflow-hidden bg-primary px-4 py-12">
     {{-- WebGL nebula background; wire:ignore so Livewire re-renders (typing/submitting below) never tear down the canvas --}}
@@ -136,95 +173,225 @@ new class extends Component
                 ></h1>
             </template>
         </div>
-        <p class="mt-3 text-base leading-relaxed text-white/70">أدخل كود المنتج وسنضيفه إلى سلتك لطلبه من Shein نيابة عنك</p>
+        <p class="mt-3 text-base leading-relaxed text-white/70">أدخل رابط المنتج وسنطلبه لك من Shein نيابة عنك</p>
 
-        <div
-            x-data="{ open: false }"
-            x-on:link-added.window="open = false"
-            x-on:cart-updated.window="window.flyToCart($el.querySelector('button'))"
-            class="mt-8"
-        >
-            <button
-                type="button"
-                x-on:click="open = true"
-                class="mx-auto flex items-center gap-2.5 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink shadow-xl transition hover:scale-[1.02] sm:py-5 sm:text-lg"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                </svg>
-                ضع رابط المنتج هنا
-            </button>
-
+        @if ($activeCart)
             <div
-                x-show="open"
-                x-cloak
-                x-on:click.self="open = false"
-                x-on:keydown.escape.window="open = false"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                x-data="{ open: false }"
+                x-on:link-added.window="window.flyToCart($el.querySelector('button'))"
+                class="mt-8"
             >
-                <div class="w-full max-w-md rounded-2xl bg-white p-6 text-start shadow-xl sm:p-8" x-on:click.stop>
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-bold text-ink">أضف منتجاً إلى سلتك</h2>
-                        <button type="button" x-on:click="open = false" class="text-muted hover:text-ink" aria-label="إغلاق">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+                <button
+                    type="button"
+                    x-on:click="open = true"
+                    class="mx-auto flex items-center gap-2.5 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink shadow-xl transition hover:scale-[1.02] sm:py-5 sm:text-lg"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                    </svg>
+                    ضع رابط المنتج هنا
+                </button>
 
-                    <form wire:submit="addToCart" class="mt-4 space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-ink-soft">رابط المنتج</label>
-                            <input
-                                type="text"
-                                wire:model="link"
-                                dir="ltr"
-                                placeholder="https://..."
-                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
-                            >
-                            @error('link') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                <div
+                    x-show="open"
+                    x-cloak
+                    x-on:click.self="open = false"
+                    x-on:keydown.escape.window="open = false"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                >
+                    <div class="w-full max-w-md rounded-2xl bg-white p-6 text-start shadow-xl sm:p-8" x-on:click.stop>
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-bold text-ink">أضف منتجاً</h2>
+                            <button type="button" x-on:click="open = false" class="text-muted hover:text-ink" aria-label="إغلاق">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-ink-soft">الكمية</label>
-                            <input
-                                type="number"
-                                min="1"
-                                wire:model="quantity"
-                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
-                            >
-                            @error('quantity') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        <div class="mt-4 rounded-lg bg-surface p-3 text-sm text-ink-soft">
+                            الإضافة إلى: <span class="font-semibold text-ink">{{ $activeCart->cart_name }}</span>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-ink-soft">ملاحظات إضافية (اختياري)</label>
-                            <textarea
-                                wire:model="notes"
-                                rows="2"
-                                placeholder="مثال: المقاس M، اللون أزرق..."
-                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
-                            ></textarea>
-                            @error('notes') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
-                        </div>
-
-                        <button
-                            type="submit"
-                            wire:loading.attr="disabled"
-                            wire:target="addToCart"
-                            class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
+                        <div
+                            class="mt-4 space-y-4"
+                            x-data="{
+                                confirming: false,
+                                pLink: @js($link),
+                                pQuantity: @js($quantity),
+                                pSpecifications: @js($specifications),
+                                pPhone: @js($customerPhone),
+                            }"
                         >
-                            <span wire:loading.remove wire:target="addToCart">إضافة إلى السلة</span>
-                            <span wire:loading wire:target="addToCart">جارٍ الإضافة...</span>
-                        </button>
-                    </form>
+                        @if ($justAdded)
+                            <div class="space-y-4">
+                                <div class="rounded-lg border border-green-300 bg-green-50 p-3">
+                                    <p class="text-sm font-semibold text-green-700">تمت الإضافة إلى السلة بنجاح ✓</p>
+                                </div>
+
+                                @if ($adminWhatsappLink)
+                                    <div class="rounded-lg border border-line-medium bg-surface p-3">
+                                        <p class="text-sm text-ink-soft">لأي استفسار بخصوص هذا المنتج</p>
+                                        <a
+                                            href="{{ $adminWhatsappLink }}"
+                                            target="_blank"
+                                            class="mt-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-line-medium py-2 text-sm font-semibold text-ink transition hover:border-black"
+                                        >
+                                            تواصل معنا عبر واتساب
+                                        </a>
+                                    </div>
+                                @endif
+
+                                <button
+                                    type="button"
+                                    wire:click="$set('justAdded', false)"
+                                    x-on:click="confirming = false"
+                                    class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover"
+                                >
+                                    إضافة منتج آخر
+                                </button>
+                            </div>
+                        @else
+                        @if ($errors->any())
+                            <div class="rounded-lg border border-discount bg-discount-light p-3">
+                                <p class="text-sm font-semibold text-discount">تعذّرت الإضافة، يرجى تصحيح ما يلي:</p>
+                                <ul class="mt-1 list-inside list-disc text-sm text-discount">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+
+                            @if ($adminWhatsappLink)
+                                <div class="rounded-lg border border-line-medium bg-surface p-3">
+                                    <p class="text-sm text-ink-soft">هل واجهت مشكلة أثناء الإضافة؟</p>
+                                    <a
+                                        href="{{ $adminWhatsappLink }}"
+                                        target="_blank"
+                                        class="mt-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-line-medium py-2 text-sm font-semibold text-ink transition hover:border-black"
+                                    >
+                                        تواصل معنا عبر واتساب
+                                    </a>
+                                </div>
+                            @endif
+                        @endif
+
+                        <div x-show="!confirming" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-ink-soft">رابط المنتج</label>
+                                <input
+                                    type="text"
+                                    wire:model="link"
+                                    x-model="pLink"
+                                    dir="ltr"
+                                    placeholder="https://..."
+                                    @class([
+                                        'mt-1.5 w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                                        'border-discount' => $errors->has('link'),
+                                        'border-line-medium' => ! $errors->has('link'),
+                                    ])
+                                >
+                                @error('link') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-ink-soft">الكمية</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    wire:model="quantity"
+                                    x-model="pQuantity"
+                                    @class([
+                                        'mt-1.5 w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                                        'border-discount' => $errors->has('quantity'),
+                                        'border-line-medium' => ! $errors->has('quantity'),
+                                    ])
+                                >
+                                @error('quantity') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-ink-soft">مواصفات المنتج (اختياري)</label>
+                                <textarea
+                                    wire:model="specifications"
+                                    x-model="pSpecifications"
+                                    rows="2"
+                                    placeholder="مثال: المقاس M، اللون أزرق..."
+                                    @class([
+                                        'mt-1.5 w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                                        'border-discount' => $errors->has('specifications'),
+                                        'border-line-medium' => ! $errors->has('specifications'),
+                                    ])
+                                ></textarea>
+                                @error('specifications') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-ink-soft">رقم واتساب للتواصل معك</label>
+                                <div class="mt-1.5 flex gap-2" dir="ltr">
+                                    <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-line-medium bg-surface px-2 py-2.5 text-base text-ink-soft">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" class="h-3.5 w-5 flex-shrink-0 rounded-sm"><rect width="24" height="16" fill="#fff" /><rect width="24" height="5.33" fill="#CE1126" /><rect y="10.67" width="24" height="5.33" fill="#000" /></svg>
+                                        <span>+967</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        wire:model="customerPhone"
+                                        x-model="pPhone"
+                                        placeholder="7xxxxxxxx"
+                                        @class([
+                                            'w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                                            'border-discount' => $errors->has('customerPhone'),
+                                            'border-line-medium' => ! $errors->has('customerPhone'),
+                                        ])
+                                    >
+                                </div>
+                                @error('customerPhone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
+
+                            <button
+                                type="button"
+                                x-on:click="confirming = true"
+                                class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover"
+                            >
+                                إضافة إلى السلة
+                            </button>
+                        </div>
+
+                        <div x-show="confirming" x-cloak class="space-y-3">
+                            <p class="text-sm font-semibold text-ink">تأكد من صحة المعلومات قبل الإضافة:</p>
+
+                            <div class="space-y-2 rounded-lg bg-surface p-3 text-sm">
+                                <p class="text-ink-soft">الرابط: <span class="break-all font-medium text-ink" dir="ltr" x-text="pLink"></span></p>
+                                <p class="text-ink-soft">الكمية: <span class="font-medium text-ink" x-text="pQuantity"></span></p>
+                                <p class="text-ink-soft" x-show="pSpecifications">المواصفات: <span class="font-medium text-ink" x-text="pSpecifications"></span></p>
+                                <p class="text-ink-soft">رقم واتساب: <span class="font-medium text-ink" dir="ltr" x-text="'+967 ' + pPhone"></span></p>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    x-on:click="$wire.addToCart().then(() => { confirming = false })"
+                                    wire:loading.attr="disabled"
+                                    wire:target="addToCart"
+                                    class="flex-1 rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
+                                >
+                                    <span wire:loading.remove wire:target="addToCart">نعم، المعلومات صحيحة</span>
+                                    <span wire:loading wire:target="addToCart">جارٍ الإضافة...</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    x-on:click="confirming = false"
+                                    class="flex-1 rounded-lg border border-line-medium py-3 text-base font-semibold text-ink"
+                                >
+                                    رجوع للتعديل
+                                </button>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
-
-        @if ($justAdded)
-            <p class="mt-4 text-sm text-white/70" wire:poll.3s="$set('justAdded', false)">
-                تمت الإضافة إلى سلتك ✓
-            </p>
         @endif
     </div>
 </div>

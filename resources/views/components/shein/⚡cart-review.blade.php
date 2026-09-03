@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\SheinCart;
 use App\Support\GuestCart;
 use Livewire\Attributes\Validate;
@@ -7,10 +8,19 @@ use Livewire\Component;
 
 new class extends Component
 {
+    #[Validate('required|string|max:255')]
+    public string $cart_name = '';
+
     #[Validate('required|string|max:20|regex:/^(?=.*\d)[0-9+\s-]+$/')]
     public string $customer_phone = '';
 
     public ?string $confirmedCartNumber = null;
+
+    public function mount(): void
+    {
+        $this->cart_name = GuestCart::cartName() ?: Setting::get('default_cart_name', 'طلبي من Shein');
+        $this->customer_phone = GuestCart::customerPhone();
+    }
 
     public function removeItem(string $id): void
     {
@@ -31,6 +41,10 @@ new class extends Component
         $cartDetails = collect($items)->map(function (array $item) {
             $line = $item['code'].' (الكمية: '.($item['quantity'] ?? 1).')';
 
+            if (! empty($item['date'])) {
+                $line .= ' — بتاريخ: '.$item['date'];
+            }
+
             if (! empty($item['notes'])) {
                 $line .= ' — ملاحظات: '.$item['notes'];
             }
@@ -39,6 +53,7 @@ new class extends Component
         })->implode("\n");
 
         $cart = SheinCart::createWithUniqueNumber([
+            'cart_name' => $this->cart_name,
             'cart_details' => $cartDetails,
             'customer_phone' => $this->customer_phone,
         ]);
@@ -76,6 +91,9 @@ new class extends Component
                     <div class="min-w-0">
                         <p class="truncate text-sm text-ink" dir="ltr">{{ $item['code'] }}</p>
                         <p class="text-xs text-muted">الكمية: {{ $item['quantity'] ?? 1 }}</p>
+                        @if (! empty($item['date']))
+                            <p class="text-xs text-disabled">{{ $item['date'] }}</p>
+                        @endif
                         @if (! empty($item['notes']))
                             <p class="truncate text-xs text-disabled">{{ $item['notes'] }}</p>
                         @endif
@@ -103,6 +121,12 @@ new class extends Component
 
         @if (! empty($items))
             <form wire:submit="confirmOrder" class="mt-6 space-y-4 border-t border-line-medium pt-4">
+                <div>
+                    <label class="block text-sm font-medium text-ink-soft">اسم السلة</label>
+                    <input type="text" wire:model="cart_name" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+                    @error('cart_name') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-ink-soft">رقم واتساب الخاص بك</label>
                     <input type="text" wire:model="customer_phone" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">

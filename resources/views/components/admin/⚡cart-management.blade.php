@@ -58,10 +58,6 @@ new class extends Component
                 + سلة جديدة
             </a>
 
-            <a href="{{ route('admin.carts.main') }}" class="flex-shrink-0 rounded-lg border border-line-medium px-3 py-1.5 text-sm font-medium text-ink-soft">
-                السلة الرئيسية
-            </a>
-
             <select wire:model.live="statusFilter" class="rounded-lg border border-line-medium px-3 py-1.5 text-sm focus:border-black focus:ring-1 focus:ring-black">
                 @foreach (\App\Models\SheinCart::STATUSES as $status)
                     <option value="{{ $status }}">{{ $statusLabels[$status] }}</option>
@@ -80,6 +76,9 @@ new class extends Component
                             &middot; {{ $cart->cart_number }}
                             @if ($cart->is_locked)
                                 <span class="ms-1 rounded bg-discount-light px-1.5 py-0.5 text-xs font-medium text-discount">مقفلة</span>
+                            @endif
+                            @if ($cart->accepts_submissions)
+                                <span class="ms-1 rounded bg-primary px-1.5 py-0.5 text-xs font-medium text-white">تستقبل روابط الزوار</span>
                             @endif
                         </p>
                         <p class="text-sm text-muted">{{ $cart->customer_phone }} &middot; {{ $cart->items_count }} عنصر</p>
