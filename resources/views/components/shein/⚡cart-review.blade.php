@@ -28,7 +28,15 @@ new class extends Component
 
         $this->validate();
 
-        $cartDetails = collect($items)->pluck('code')->implode("\n");
+        $cartDetails = collect($items)->map(function (array $item) {
+            $line = $item['code'].' (الكمية: '.($item['quantity'] ?? 1).')';
+
+            if (! empty($item['notes'])) {
+                $line .= ' — ملاحظات: '.$item['notes'];
+            }
+
+            return $line;
+        })->implode("\n");
 
         $cart = SheinCart::createWithUniqueNumber([
             'cart_details' => $cartDetails,
@@ -64,12 +72,18 @@ new class extends Component
 
         <div class="mt-4 space-y-2">
             @forelse ($items as $item)
-                <div class="flex items-center justify-between rounded-lg border border-line-medium p-3">
-                    <span class="text-sm text-ink" dir="ltr">{{ $item['code'] }}</span>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-line-medium p-3">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm text-ink" dir="ltr">{{ $item['code'] }}</p>
+                        <p class="text-xs text-muted">الكمية: {{ $item['quantity'] ?? 1 }}</p>
+                        @if (! empty($item['notes']))
+                            <p class="truncate text-xs text-disabled">{{ $item['notes'] }}</p>
+                        @endif
+                    </div>
                     <button
                         type="button"
                         wire:click="removeItem('{{ $item['id'] }}')"
-                        class="text-sm text-discount underline"
+                        class="flex-shrink-0 text-sm text-discount underline"
                     >
                         إزالة
                     </button>

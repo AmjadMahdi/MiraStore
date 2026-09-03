@@ -17,6 +17,7 @@ class SheinCart extends Model
     protected $fillable = [
         'cart_number',
         'cart_name',
+        'description',
         'customer_phone',
         'cart_details',
         'status',

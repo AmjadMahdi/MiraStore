@@ -12,16 +12,21 @@ class GuestCartTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_hero_adds_a_code_to_the_session_cart(): void
+    public function test_hero_adds_a_link_to_the_session_cart(): void
     {
         Livewire::test('shein.hero')
-            ->set('code', 'ABC123')
+            ->set('link', 'ABC123')
+            ->set('quantity', '2')
+            ->set('notes', 'المقاس M')
             ->call('addToCart')
-            ->assertSet('code', '')
+            ->assertSet('link', '')
             ->assertSet('justAdded', true);
 
         $this->assertCount(1, GuestCart::items());
-        $this->assertSame('ABC123', GuestCart::items()[0]['code']);
+        $item = GuestCart::items()[0];
+        $this->assertSame('ABC123', $item['code']);
+        $this->assertSame(2, $item['quantity']);
+        $this->assertSame('المقاس M', $item['notes']);
     }
 
     public function test_cart_badge_reflects_item_count(): void
@@ -62,7 +67,7 @@ class GuestCartTest extends TestCase
 
         $this->assertDatabaseHas('shein_carts', [
             'customer_phone' => '+9677700000',
-            'cart_details' => "ABC123\nDEF456",
+            'cart_details' => "ABC123 (الكمية: 1)\nDEF456 (الكمية: 1)",
         ]);
 
         $this->assertCount(0, GuestCart::items());

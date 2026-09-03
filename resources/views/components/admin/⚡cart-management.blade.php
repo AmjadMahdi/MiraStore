@@ -83,6 +83,7 @@ new class extends Component
                             @endif
                         </p>
                         <p class="text-sm text-muted">{{ $cart->customer_phone }} &middot; {{ $cart->items_count }} عنصر</p>
+                        <p class="text-xs text-disabled">{{ $cart->created_at->format('Y-m-d') }}</p>
                     </div>
 
                     <select

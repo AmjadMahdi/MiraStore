@@ -14,10 +14,15 @@ class GuestCart
         return Session::get(self::SESSION_KEY, []);
     }
 
-    public static function add(string $code): void
+    public static function add(string $code, int $quantity = 1, ?string $notes = null): void
     {
         $items = self::items();
-        $items[] = ['id' => (string) Str::uuid(), 'code' => $code];
+        $items[] = [
+            'id' => (string) Str::uuid(),
+            'code' => $code,
+            'quantity' => max(1, $quantity),
+            'notes' => $notes,
+        ];
         Session::put(self::SESSION_KEY, $items);
     }
 

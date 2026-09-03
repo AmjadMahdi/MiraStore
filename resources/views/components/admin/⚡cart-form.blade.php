@@ -9,6 +9,9 @@ new class extends Component
     #[Validate('required|string|max:255')]
     public string $cart_name = 'طلبي من شي إن';
 
+    #[Validate('nullable|string|max:2000')]
+    public string $description = '';
+
     #[Validate('required|string|max:20|regex:/^(?=.*\d)[0-9+\s-]+$/')]
     public string $customer_phone = '';
 
@@ -18,6 +21,7 @@ new class extends Component
 
         $cart = SheinCart::createWithUniqueNumber([
             'cart_name' => $this->cart_name,
+            'description' => $this->description !== '' ? $this->description : null,
             'customer_phone' => $this->customer_phone,
             'cart_details' => '',
         ]);
@@ -35,6 +39,12 @@ new class extends Component
             <label class="block text-sm font-medium text-ink-soft">اسم السلة</label>
             <input type="text" wire:model="cart_name" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
             @error('cart_name') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-ink-soft">وصف السلة (اختياري)</label>
+            <textarea wire:model="description" rows="3" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"></textarea>
+            @error('description') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
 
         <div>

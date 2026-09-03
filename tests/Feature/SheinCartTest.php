@@ -185,12 +185,14 @@ class SheinCartTest extends TestCase
         Livewire::actingAs($admin)
             ->test('admin.cart-form')
             ->set('cart_name', 'طلب هاتفي')
+            ->set('description', 'طلب من زبون عبر الهاتف')
             ->set('customer_phone', '+9677700000')
             ->call('save')
             ->assertRedirect();
 
         $this->assertDatabaseHas('shein_carts', [
             'cart_name' => 'طلب هاتفي',
+            'description' => 'طلب من زبون عبر الهاتف',
             'customer_phone' => '+9677700000',
         ]);
     }
@@ -297,12 +299,14 @@ class SheinCartTest extends TestCase
             ->test('admin.cart-detail', ['cart' => $cart])
             ->call('startEditCartDetails')
             ->set('editCartName', 'اسم جديد')
+            ->set('editDescription', 'وصف جديد')
             ->set('editCustomerPhone', '+9677711111')
             ->call('updateCartDetails')
             ->assertSet('editingCartDetails', false);
 
         $cart->refresh();
         $this->assertSame('اسم جديد', $cart->cart_name);
+        $this->assertSame('وصف جديد', $cart->description);
         $this->assertSame('+9677711111', $cart->customer_phone);
     }
 

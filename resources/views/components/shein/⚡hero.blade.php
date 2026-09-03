@@ -6,8 +6,14 @@ use Livewire\Component;
 
 new class extends Component
 {
-    #[Validate('required|string|max:255')]
-    public string $code = '';
+    #[Validate('required|string|max:2000')]
+    public string $link = '';
+
+    #[Validate('required|integer|min:1|max:99')]
+    public string $quantity = '1';
+
+    #[Validate('nullable|string|max:1000')]
+    public string $notes = '';
 
     public bool $justAdded = false;
 
@@ -15,11 +21,14 @@ new class extends Component
     {
         $this->validate();
 
-        GuestCart::add($this->code);
+        GuestCart::add($this->link, (int) $this->quantity, $this->notes !== '' ? $this->notes : null);
 
-        $this->code = '';
+        $this->link = '';
+        $this->quantity = '1';
+        $this->notes = '';
         $this->justAdded = true;
         $this->dispatch('cart-updated');
+        $this->dispatch('link-added');
     }
 };
 ?>
@@ -129,36 +138,88 @@ new class extends Component
         </div>
         <p class="mt-3 text-base leading-relaxed text-white/70">أدخل كود المنتج وسنضيفه إلى سلتك لطلبه من Shein نيابة عنك</p>
 
-        <form
-            wire:submit="addToCart"
-            x-on:cart-updated.window="window.flyToCart($el.querySelector('button[type=submit]'))"
+        <div
+            x-data="{ open: false }"
+            x-on:link-added.window="open = false"
+            x-on:cart-updated.window="window.flyToCart($el.querySelector('button'))"
             class="mt-8"
         >
-            <div class="flex items-center gap-2 rounded-full bg-white p-2 shadow-xl sm:p-2.5">
-                <input
-                    type="text"
-                    wire:model="code"
-                    placeholder="أدخل الكود الذي تريده هنا"
-                    class="flex-1 rounded-full border-0 bg-transparent px-5 py-4 text-base text-ink placeholder:text-disabled focus:outline-none focus:ring-0 sm:py-5 sm:text-lg"
-                >
-                <button
-                    type="submit"
-                    wire:loading.attr="disabled"
-                    wire:target="addToCart"
-                    aria-label="إرسال"
-                    class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary-hover disabled:opacity-60 sm:h-16 sm:w-16"
-                >
-                    <svg wire:loading.remove wire:target="addToCart" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 sm:h-7 sm:w-7" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-                    </svg>
-                    <svg wire:loading wire:target="addToCart" class="h-6 w-6 animate-spin sm:h-7 sm:w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                </button>
+            <button
+                type="button"
+                x-on:click="open = true"
+                class="mx-auto flex items-center gap-2.5 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink shadow-xl transition hover:scale-[1.02] sm:py-5 sm:text-lg"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                </svg>
+                ضع رابط المنتج هنا
+            </button>
+
+            <div
+                x-show="open"
+                x-cloak
+                x-on:click.self="open = false"
+                x-on:keydown.escape.window="open = false"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            >
+                <div class="w-full max-w-md rounded-2xl bg-white p-6 text-start shadow-xl sm:p-8" x-on:click.stop>
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-ink">أضف منتجاً إلى سلتك</h2>
+                        <button type="button" x-on:click="open = false" class="text-muted hover:text-ink" aria-label="إغلاق">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <form wire:submit="addToCart" class="mt-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-ink-soft">رابط المنتج</label>
+                            <input
+                                type="text"
+                                wire:model="link"
+                                dir="ltr"
+                                placeholder="https://..."
+                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+                            >
+                            @error('link') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-ink-soft">الكمية</label>
+                            <input
+                                type="number"
+                                min="1"
+                                wire:model="quantity"
+                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+                            >
+                            @error('quantity') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-ink-soft">ملاحظات إضافية (اختياري)</label>
+                            <textarea
+                                wire:model="notes"
+                                rows="2"
+                                placeholder="مثال: المقاس M، اللون أزرق..."
+                                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+                            ></textarea>
+                            @error('notes') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        </div>
+
+                        <button
+                            type="submit"
+                            wire:loading.attr="disabled"
+                            wire:target="addToCart"
+                            class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
+                        >
+                            <span wire:loading.remove wire:target="addToCart">إضافة إلى السلة</span>
+                            <span wire:loading wire:target="addToCart">جارٍ الإضافة...</span>
+                        </button>
+                    </form>
+                </div>
             </div>
-            @error('code') <p class="mt-3 text-sm text-rose-300">{{ $message }}</p> @enderror
-        </form>
+        </div>
 
         @if ($justAdded)
             <p class="mt-4 text-sm text-white/70" wire:poll.3s="$set('justAdded', false)">

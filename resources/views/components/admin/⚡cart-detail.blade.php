@@ -22,6 +22,8 @@ new class extends Component
 
     public string $editCartName = '';
 
+    public string $editDescription = '';
+
     public string $editCustomerPhone = '';
 
     public function mount(SheinCart $cart): void
@@ -104,6 +106,7 @@ new class extends Component
     {
         $this->editingCartDetails = true;
         $this->editCartName = $this->cart->cart_name;
+        $this->editDescription = (string) $this->cart->description;
         $this->editCustomerPhone = $this->cart->customer_phone;
     }
 
@@ -116,11 +119,13 @@ new class extends Component
     {
         $this->validate([
             'editCartName' => ['required', 'string', 'max:255'],
+            'editDescription' => ['nullable', 'string', 'max:2000'],
             'editCustomerPhone' => ['required', 'string', 'max:20', 'regex:/^(?=.*\d)[0-9+\s-]+$/'],
         ]);
 
         $this->cart->update([
             'cart_name' => $this->editCartName,
+            'description' => $this->editDescription !== '' ? $this->editDescription : null,
             'customer_phone' => $this->editCustomerPhone,
         ]);
 
@@ -181,6 +186,11 @@ new class extends Component
                     @error('editCartName') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                 </div>
                 <div>
+                    <label class="block text-sm font-medium text-ink-soft">الوصف (اختياري)</label>
+                    <textarea wire:model="editDescription" rows="2" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black"></textarea>
+                    @error('editDescription') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                </div>
+                <div>
                     <label class="block text-sm font-medium text-ink-soft">رقم واتساب العميل</label>
                     <input type="text" wire:model="editCustomerPhone" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                     @error('editCustomerPhone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
@@ -199,6 +209,10 @@ new class extends Component
                     @endif
                 </h1>
                 <p class="mt-1 text-sm text-muted">{{ $cart->cart_number }} &middot; {{ $cart->customer_phone }}</p>
+                <p class="mt-1 text-xs text-disabled">تاريخ الإنشاء: {{ $cart->created_at->format('Y-m-d H:i') }}</p>
+                @if ($cart->description)
+                    <p class="mt-2 whitespace-pre-line text-sm text-ink-soft">{{ $cart->description }}</p>
+                @endif
             </div>
 
             <div class="flex flex-shrink-0 items-center gap-3">
