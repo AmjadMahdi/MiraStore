@@ -76,7 +76,7 @@ new class extends Component
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-ink">
-                            {{ $cart->cart_name }}
+                            <a href="{{ route('admin.carts.show', $cart) }}" class="underline-offset-2 hover:underline">{{ $cart->cart_name }}</a>
                             &middot; {{ $cart->cart_number }}
                             @if ($cart->is_locked)
                                 <span class="ms-1 rounded bg-discount-light px-1.5 py-0.5 text-xs font-medium text-discount">مقفلة</span>

@@ -13,13 +13,19 @@ class SheinCartItem extends Model
     protected $fillable = [
         'shein_cart_id',
         'name',
+        'quantity',
         'link',
         'item_date',
+    ];
+
+    protected $attributes = [
+        'quantity' => 1,
     ];
 
     protected function casts(): array
     {
         return [
+            'quantity' => 'integer',
             'item_date' => 'date',
         ];
     }

@@ -93,6 +93,21 @@ class SheinCartTest extends TestCase
         $this->assertSame('ordered', $cart->fresh()->status);
     }
 
+    public function test_cart_list_links_the_cart_name_to_its_detail_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $cart = SheinCart::create([
+            'cart_name' => 'Spring Order',
+            'customer_phone' => '+9677722222',
+            'cart_details' => 'link',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('admin.cart-management')
+            ->assertSee(route('admin.carts.show', $cart), false);
+    }
+
     public function test_admin_can_delete_a_cart_from_the_list_page(): void
     {
         $admin = User::factory()->create(['role' => 'super_admin']);
@@ -240,6 +255,7 @@ class SheinCartTest extends TestCase
             ->test('admin.cart-detail', ['cart' => $cart])
             ->set('itemName', 'فستان أزرق')
             ->set('itemLink', 'https://shein.com/item/1')
+            ->set('itemQuantity', '3')
             ->set('itemDate', '2026-09-01')
             ->call('addItem');
 
@@ -247,6 +263,7 @@ class SheinCartTest extends TestCase
             'shein_cart_id' => $cart->id,
             'name' => 'فستان أزرق',
             'link' => 'https://shein.com/item/1',
+            'quantity' => 3,
         ]);
 
         $item = $cart->items()->first();

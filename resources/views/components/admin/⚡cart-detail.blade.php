@@ -12,6 +12,8 @@ new class extends Component
 
     public string $itemName = '';
 
+    public string $itemQuantity = '1';
+
     public string $itemLink = '';
 
     public string $itemDate = '';
@@ -38,17 +40,20 @@ new class extends Component
 
         $this->validate([
             'itemName' => ['nullable', 'string', 'max:255'],
+            'itemQuantity' => ['required', 'integer', 'min:1'],
             'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
         $this->cart->items()->create([
             'name' => $this->itemName !== '' ? $this->itemName : null,
+            'quantity' => (int) $this->itemQuantity,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
         ]);
 
         $this->itemName = '';
+        $this->itemQuantity = '1';
         $this->itemLink = '';
         $this->itemDate = now()->format('Y-m-d');
     }
@@ -60,6 +65,7 @@ new class extends Component
 
         $this->editingItemId = $item->id;
         $this->itemName = (string) $item->name;
+        $this->itemQuantity = (string) $item->quantity;
         $this->itemLink = (string) $item->link;
         $this->itemDate = $item->item_date->format('Y-m-d');
     }
@@ -68,6 +74,7 @@ new class extends Component
     {
         $this->editingItemId = null;
         $this->itemName = '';
+        $this->itemQuantity = '1';
         $this->itemLink = '';
         $this->itemDate = now()->format('Y-m-d');
     }
@@ -81,12 +88,14 @@ new class extends Component
 
         $this->validate([
             'itemName' => ['nullable', 'string', 'max:255'],
+            'itemQuantity' => ['required', 'integer', 'min:1'],
             'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
         ]);
 
         $item->update([
             'name' => $this->itemName !== '' ? $this->itemName : null,
+            'quantity' => (int) $this->itemQuantity,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
         ]);
@@ -340,6 +349,11 @@ new class extends Component
                                 @error('itemLink') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-ink-soft">الكمية</label>
+                                <input type="number" min="1" wire:model="itemQuantity" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
+                                @error('itemQuantity') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-ink-soft">التاريخ</label>
                                 <input type="date" wire:model="itemDate" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                                 @error('itemDate') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
@@ -352,7 +366,10 @@ new class extends Component
                     @else
                         <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-ink">{{ $item->name ?? 'بدون وصف' }}</p>
+                                <p class="truncate text-sm font-medium text-ink">
+                                    {{ $item->name ?? 'بدون وصف' }}
+                                    <span class="ms-1 rounded bg-surface px-1.5 py-0.5 text-xs font-medium text-muted">الكمية: {{ $item->quantity }}</span>
+                                </p>
                                 @if ($item->link)
                                     <p class="truncate text-xs text-muted" dir="ltr">{{ $item->link }}</p>
                                 @endif
@@ -430,6 +447,12 @@ new class extends Component
                 <label class="block text-sm font-medium text-ink-soft">الرابط أو الكود</label>
                 <input type="text" wire:model="itemLink" dir="ltr" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
                 @error('itemLink') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-ink-soft">الكمية</label>
+                <input type="number" min="1" wire:model="itemQuantity" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+                @error('itemQuantity') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
 
             <div>
