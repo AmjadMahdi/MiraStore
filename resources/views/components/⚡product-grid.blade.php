@@ -151,7 +151,10 @@ new class extends Component
 
                     <p class="mt-1 flex items-center gap-1 truncate text-xs text-muted">
                         <svg class="h-3 w-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8l1-4h14l1 4M4 8v11a1 1 0 001 1h14a1 1 0 001-1V8M4 8h16M9 20v-5h6v5"/></svg>
-                        {{ $product->vendor->store_name }}
+                        <span class="truncate">{{ $product->vendor->store_name }}</span>
+                        @if ($product->vendor->is_verified)
+                            <span class="flex-shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-white">موثّق</span>
+                        @endif
                     </p>
 
                     <div class="mt-2 flex items-baseline gap-1.5">

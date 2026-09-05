@@ -143,6 +143,36 @@ class StoreTest extends TestCase
             ->assertSee(route('store.product.contact', [$vendor, $product]), false);
     }
 
+    public function test_homepage_grid_card_shows_a_trusted_badge_for_verified_vendors(): void
+    {
+        $verifiedVendor = User::factory()->create([
+            'role' => 'vendor', 'store_name' => 'Trusted Shop', 'is_verified' => true,
+        ]);
+        $unverifiedVendor = User::factory()->create([
+            'role' => 'vendor', 'store_name' => 'Regular Shop', 'is_verified' => false,
+        ]);
+
+        Product::create([
+            'vendor_id' => $verifiedVendor->id, 'name' => 'Verified Product', 'description' => 'x',
+            'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+        ]);
+        Product::create([
+            'vendor_id' => $unverifiedVendor->id, 'name' => 'Unverified Product', 'description' => 'x',
+            'price' => 10, 'image_path' => 'products/b.jpg', 'status' => 'approved',
+        ]);
+
+        $component = Livewire::test('product-grid');
+
+        $component->assertSeeHtml('موثّق');
+
+        $html = $component->html();
+        $verifiedPos = strpos($html, 'Verified Product');
+        $badgePos = strpos($html, 'موثّق');
+        $unverifiedPos = strpos($html, 'Unverified Product');
+
+        $this->assertTrue($verifiedPos < $badgePos && $badgePos < $unverifiedPos);
+    }
+
     public function test_store_grid_card_shows_discount_price_and_whatsapp_button(): void
     {
         $vendor = User::factory()->create([
