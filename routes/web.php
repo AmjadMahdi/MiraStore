@@ -39,6 +39,10 @@ Route::post('/logout', function () {
     return redirect()->route('home');
 })->middleware('auth')->name('logout');
 
+Route::middleware('auth')->prefix('vendor')->name('vendor.')->group(function () {
+    Route::view('/status', 'vendor.application-status')->name('status');
+});
+
 Route::middleware(['auth', 'role:vendor'])->prefix('vendor')->name('vendor.')->group(function () {
     Route::view('/dashboard', 'vendor.dashboard')->name('dashboard');
 
@@ -51,7 +55,7 @@ Route::middleware(['auth', 'role:vendor'])->prefix('vendor')->name('vendor.')->g
     Route::view('/analytics', 'vendor.analytics')->name('analytics');
 });
 
-Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'role:super_admin,supervisor'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::view('/products', 'admin.products')->name('products.index');
     Route::view('/products/order', 'admin.products-order')->name('products.order');
@@ -75,4 +79,17 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('admin')->name('admin.')
 
     Route::view('/activity', 'admin.activity')->name('activity.index');
     Route::view('/settings', 'admin.settings')->name('settings.index');
+
+    // Managing staff (System Administrator / System Supervisor) accounts is
+    // restricted to super_admin only — a supervisor cannot create, edit, or
+    // delete other staff accounts, including their own.
+    Route::middleware('role:super_admin')->group(function () {
+        Route::view('/staff', 'admin.staff')->name('staff.index');
+        Route::view('/staff/create', 'admin.staff-create')->name('staff.create');
+        Route::get('/staff/{staff}/edit', function (\App\Models\User $staff) {
+            abort_unless($staff->isStaff(), 404);
+
+            return view('admin.staff-edit', ['staff' => $staff]);
+        })->name('staff.edit');
+    });
 });

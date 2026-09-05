@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Setting;
 use App\Models\SheinCart;
 use App\Support\GuestCart;
 use Livewire\Attributes\Validate;
@@ -18,7 +17,7 @@ new class extends Component
 
     public function mount(): void
     {
-        $this->cart_name = GuestCart::cartName() ?: Setting::get('default_cart_name', 'طلبي من Shein');
+        $this->cart_name = GuestCart::cartName() ?: 'طلبي من Shein';
         $this->customer_phone = GuestCart::customerPhone();
     }
 

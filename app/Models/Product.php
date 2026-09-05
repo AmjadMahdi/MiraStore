@@ -65,7 +65,7 @@ class Product extends Model
                 $contentDirty
                 && ! $product->isDirty('status')
                 && in_array($product->getOriginal('status'), ['approved', 'rejected'], true)
-                && ! (Auth::check() && Auth::user()->isSuperAdmin())
+                && ! (Auth::check() && Auth::user()->isStaff())
             ) {
                 $product->status = 'pending';
                 $product->rejection_reason = null;

@@ -28,6 +28,7 @@ class User extends Authenticatable
      */
     protected $attributes = [
         'role' => 'vendor',
+        'application_status' => 'approved',
         'is_active' => true,
         'max_products_limit' => 5,
         'is_verified' => false,
@@ -44,6 +45,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'application_status',
+        'application_rejection_reason',
         'store_name',
         'whatsapp_number',
         'is_active',
@@ -81,7 +84,7 @@ class User extends Authenticatable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['is_active', 'is_verified', 'is_platform_store', 'max_products_limit'])
+            ->logOnly(['is_active', 'is_verified', 'is_platform_store', 'max_products_limit', 'application_status'])
             ->logOnlyDirty();
     }
 
@@ -98,9 +101,33 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
+    public function isSupervisor(): bool
+    {
+        return $this->role === 'supervisor';
+    }
+
+    /**
+     * True for any staff-level account (super_admin or supervisor) — i.e.
+     * anyone who can reach the admin panel, as opposed to a plain vendor.
+     */
+    public function isStaff(): bool
+    {
+        return in_array($this->role, ['super_admin', 'supervisor'], true);
+    }
+
     public function isVendor(): bool
     {
         return $this->role === 'vendor';
+    }
+
+    public function isApplicationPending(): bool
+    {
+        return $this->application_status === 'pending';
+    }
+
+    public function isApplicationRejected(): bool
+    {
+        return $this->application_status === 'rejected';
     }
 
     public function products(): HasMany

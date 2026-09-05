@@ -41,6 +41,13 @@ new class extends Component
 
         $user = Auth::user();
 
+        if ($user->isVendor() && ($user->isApplicationPending() || $user->isApplicationRejected())) {
+            session()->regenerate();
+            $this->redirect(route('vendor.status'), navigate: true);
+
+            return;
+        }
+
         if (! $user->is_active) {
             Auth::logout();
             $this->addError('email', 'تم إيقاف حسابك.');
@@ -50,7 +57,7 @@ new class extends Component
 
         session()->regenerate();
 
-        $this->redirect($user->isSuperAdmin() ? route('admin.dashboard') : route('vendor.dashboard'), navigate: true);
+        $this->redirect($user->isStaff() ? route('admin.dashboard') : route('vendor.dashboard'), navigate: true);
     }
 };
 ?>

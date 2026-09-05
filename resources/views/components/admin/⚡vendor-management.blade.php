@@ -10,9 +10,54 @@ new class extends Component
 
     public string $search = '';
 
+    public string $statusFilter = 'all';
+
+    public ?int $rejectingVendorId = null;
+
+    public string $rejectionReason = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatingStatusFilter(): void
+    {
+        $this->resetPage();
+    }
+
+    public function approveApplication(User $vendor): void
+    {
+        abort_unless($vendor->isVendor(), 403);
+
+        $vendor->update(['application_status' => 'approved', 'application_rejection_reason' => null]);
+    }
+
+    public function startRejectApplication(int $vendorId): void
+    {
+        $this->rejectingVendorId = $vendorId;
+        $this->rejectionReason = '';
+    }
+
+    public function cancelRejectApplication(): void
+    {
+        $this->rejectingVendorId = null;
+        $this->rejectionReason = '';
+    }
+
+    public function confirmRejectApplication(): void
+    {
+        $this->validate(['rejectionReason' => 'required|string|max:500']);
+
+        $vendor = User::findOrFail($this->rejectingVendorId);
+        abort_unless($vendor->isVendor(), 403);
+
+        $vendor->update([
+            'application_status' => 'rejected',
+            'application_rejection_reason' => $this->rejectionReason,
+        ]);
+
+        $this->cancelRejectApplication();
     }
 
     public function toggleActive(User $vendor): void
@@ -60,8 +105,10 @@ new class extends Component
     public function with(): array
     {
         return [
+            'pendingCount' => User::where('role', 'vendor')->where('application_status', 'pending')->count(),
             'vendors' => User::query()
                 ->where('role', 'vendor')
+                ->when($this->statusFilter !== 'all', fn ($query) => $query->where('application_status', $this->statusFilter))
                 ->when($this->search, fn ($query) => $query->where('store_name', 'like', "%{$this->search}%"))
                 ->withCount('products')
                 ->latest()
@@ -87,6 +134,25 @@ new class extends Component
         class="mt-3 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
     >
 
+    <div class="mt-3 flex gap-2">
+        @foreach (['pending' => 'قيد المراجعة', 'approved' => 'مقبولون', 'rejected' => 'مرفوضون', 'all' => 'الكل'] as $value => $label)
+            <button
+                type="button"
+                wire:click="$set('statusFilter', '{{ $value }}')"
+                @class([
+                    'rounded-full border px-4 py-1.5 text-sm font-medium transition',
+                    'border-primary bg-primary text-white' => $statusFilter === $value,
+                    'border-line-medium text-ink-soft hover:bg-surface' => $statusFilter !== $value,
+                ])
+            >
+                {{ $label }}
+                @if ($value === 'pending' && $pendingCount > 0)
+                    <span class="ms-1 rounded-full bg-discount px-1.5 text-xs text-white">{{ $pendingCount }}</span>
+                @endif
+            </button>
+        @endforeach
+    </div>
+
     <div class="mt-6 space-y-3">
         @forelse ($vendors as $vendor)
             <div class="rounded-lg border border-line-medium p-3">
@@ -94,6 +160,11 @@ new class extends Component
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-medium text-ink">
                             {{ $vendor->store_name }}
+                            @if ($vendor->application_status === 'pending')
+                                <span class="ms-1 rounded bg-warning px-1.5 py-0.5 text-xs font-medium text-white">طلب قيد المراجعة</span>
+                            @elseif ($vendor->application_status === 'rejected')
+                                <span class="ms-1 rounded bg-discount-light px-1.5 py-0.5 text-xs font-medium text-discount">طلب مرفوض</span>
+                            @endif
                             @if ($vendor->is_platform_store)
                                 <span class="ms-1 rounded bg-success px-1.5 py-0.5 text-xs font-medium text-white">متجرنا</span>
                             @endif
@@ -109,12 +180,64 @@ new class extends Component
                             {{ $vendor->email }} &middot; {{ $vendor->products_count }} منتج
                             &middot; الحد: {{ $vendor->max_products_limit ?? 'غير محدود' }}
                         </p>
+                        @if ($vendor->application_status === 'rejected' && $vendor->application_rejection_reason)
+                            <p class="mt-1 text-xs text-discount">سبب الرفض: {{ $vendor->application_rejection_reason }}</p>
+                        @endif
                     </div>
 
                     <a href="{{ route('admin.vendors.edit', $vendor) }}" class="flex-shrink-0 text-sm text-primary underline">
                         تعديل
                     </a>
                 </div>
+
+                @if (in_array($vendor->application_status, ['pending', 'rejected'], true))
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            wire:click="approveApplication({{ $vendor->id }})"
+                            class="rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-primary-hover"
+                        >
+                            قبول الطلب
+                        </button>
+                        @if ($vendor->application_status === 'pending')
+                            <button
+                                type="button"
+                                wire:click="startRejectApplication({{ $vendor->id }})"
+                                class="rounded-lg border border-discount px-2.5 py-1 text-xs font-medium text-discount"
+                            >
+                                رفض الطلب
+                            </button>
+                        @endif
+                    </div>
+
+                    @if ($rejectingVendorId === $vendor->id)
+                        <div class="mt-2 space-y-2">
+                            <input
+                                type="text"
+                                wire:model="rejectionReason"
+                                placeholder="سبب الرفض (سيظهر للتاجر)"
+                                class="w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black"
+                            >
+                            @error('rejectionReason') <p class="text-xs text-discount">{{ $message }}</p> @enderror
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="confirmRejectApplication"
+                                    class="rounded-lg bg-discount px-2.5 py-1 text-xs font-semibold text-white transition hover:opacity-90"
+                                >
+                                    تأكيد الرفض
+                                </button>
+                                <button
+                                    type="button"
+                                    wire:click="cancelRejectApplication"
+                                    class="rounded-lg border border-line-medium px-2.5 py-1 text-xs font-medium text-ink"
+                                >
+                                    إلغاء
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+                @endif
 
                 <div class="mt-2 flex flex-wrap gap-2">
                     <div x-data="{ confirming: false }" class="contents">

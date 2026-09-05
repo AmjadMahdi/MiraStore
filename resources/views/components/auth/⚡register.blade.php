@@ -44,11 +44,12 @@ new class extends Component
             'whatsapp_number' => $this->whatsapp_number,
             'password' => Hash::make($this->password),
             'role' => 'vendor',
+            'application_status' => 'pending',
         ]);
 
         Auth::login($user);
 
-        $this->redirect(route('vendor.dashboard'), navigate: true);
+        $this->redirect(route('vendor.status'), navigate: true);
     }
 };
 ?>

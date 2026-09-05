@@ -35,7 +35,7 @@
 
                 <div class="flex items-center gap-3 text-sm sm:gap-4">
                     @auth
-                        <a href="{{ auth()->user()->isSuperAdmin() ? route('admin.dashboard') : route('vendor.dashboard') }}" class="text-muted hover:text-primary">
+                        <a href="{{ auth()->user()->isStaff() ? route('admin.dashboard') : route('vendor.dashboard') }}" class="text-muted hover:text-primary">
                             {{ __('لوحة التحكم') }}
                         </a>
 
@@ -78,15 +78,22 @@
             @elseif (request()->routeIs('admin.*'))
                 <div class="border-b border-line-medium bg-white">
                     <div class="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 text-sm">
-                        @foreach ([
-                            'admin.dashboard' => __('نظرة عامة'),
-                            'admin.products.index' => __('المنتجات'),
-                            'admin.categories.index' => __('الفئات'),
-                            'admin.vendors.index' => __('التجّار'),
-                            'admin.carts.index' => __('سلال شي إن'),
-                            'admin.activity.index' => __('سجل النشاط'),
-                            'admin.settings.index' => __('الإعدادات'),
-                        ] as $route => $label)
+                        @php
+                            $adminTabs = [
+                                'admin.dashboard' => __('نظرة عامة'),
+                                'admin.products.index' => __('المنتجات'),
+                                'admin.categories.index' => __('الفئات'),
+                                'admin.vendors.index' => __('التجّار'),
+                                'admin.carts.index' => __('سلال شي إن'),
+                                'admin.activity.index' => __('سجل النشاط'),
+                                'admin.settings.index' => __('الإعدادات'),
+                            ];
+
+                            if (auth()->user()->isSuperAdmin()) {
+                                $adminTabs['admin.staff.index'] = __('الحسابات');
+                            }
+                        @endphp
+                        @foreach ($adminTabs as $route => $label)
                             <a
                                 href="{{ route($route) }}"
                                 @class([

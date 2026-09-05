@@ -12,7 +12,7 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_vendor_can_register_and_lands_on_vendor_dashboard(): void
+    public function test_vendor_can_register_and_lands_on_the_application_status_page(): void
     {
         Livewire::test('auth.register')
             ->set('name', 'Amina')
@@ -22,12 +22,13 @@ class AuthTest extends TestCase
             ->set('password', 'password123')
             ->set('password_confirmation', 'password123')
             ->call('register')
-            ->assertRedirect(route('vendor.dashboard'));
+            ->assertRedirect(route('vendor.status'));
 
         $this->assertDatabaseHas('users', [
             'email' => 'amina@example.com',
             'role' => 'vendor',
             'max_products_limit' => 5,
+            'application_status' => 'pending',
         ]);
 
         $this->assertAuthenticated();
