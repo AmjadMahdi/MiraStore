@@ -160,20 +160,12 @@ new class extends Component
     </div>
 
     <div class="relative z-10 mx-auto max-w-2xl text-center animate-fade-in-up">
-        <div
-            x-data="{ titles: ['اطلب أي منتج من Shein بسهولة', 'بدون عمولة إضافية، توصيل حتى بابك'], active: 0 }"
-            x-init="setInterval(() => active = (active + 1) % titles.length, 3000)"
-            class="grid"
-        >
-            <template x-for="(title, i) in titles" :key="i">
-                <h1
-                    :class="active === i ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'"
-                    x-text="title"
-                    class="col-start-1 row-start-1 text-4xl font-bold tracking-tight text-white transition-all duration-700 ease-in-out sm:text-5xl"
-                ></h1>
-            </template>
-        </div>
-        <p class="mt-3 text-base leading-relaxed text-white/70">أدخل رابط المنتج وسنطلبه لك من Shein نيابة عنك</p>
+        <h1 class="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl sm:leading-tight">
+            طلباتك من شي إن لمدينة تعز..<br>أوفر وأسرع!
+        </h1>
+        <p class="mt-3 text-base leading-loose text-white/70">
+            خدمة طلب مجانية بالكامل. أدخلي رابط المنتج اللي عجبك، وخدمة العملاء بتتواصل معاكي مباشرة عشان تأكد طلبك.
+        </p>
 
         @if ($activeCart)
             <div
@@ -186,10 +178,7 @@ new class extends Component
                     x-on:click="open = true"
                     class="mx-auto flex items-center gap-2.5 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink shadow-xl transition hover:scale-[1.02] sm:py-5 sm:text-lg"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                    </svg>
-                    ضع رابط المنتج هنا
+                    🔗 هاتي رابط المنتج هنا
                 </button>
 
                 <div

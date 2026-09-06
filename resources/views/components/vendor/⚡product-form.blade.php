@@ -281,11 +281,22 @@ new class extends Component
 
         <div>
             <label class="block text-sm font-medium text-ink-soft">الصور (يتم قصها تلقائياً بشكل مربّع، يمكنك اختيار أكثر من صورة)</label>
-            <input type="file" wire:model="newImages" accept="image/*" multiple class="mt-1 w-full text-sm">
             @error('newImages') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             @error('newImages.*') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
 
             <div class="mt-3 flex flex-wrap gap-2">
+                <label
+                    class="flex h-20 w-20 flex-shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-line-medium text-muted transition hover:border-black hover:text-ink"
+                    wire:loading.class="pointer-events-none opacity-50"
+                    wire:target="newImages"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    <span class="text-[10px] font-semibold">إضافة صورة</span>
+                    <input type="file" wire:model="newImages" accept="image/*" multiple class="hidden">
+                </label>
+
                 @foreach ($existingImages as $existingImage)
                     <div x-data="{ confirming: false }" class="group relative h-20 w-20 flex-shrink-0">
                         <img src="{{ Storage::url($existingImage->path) }}" class="h-full w-full rounded-lg object-cover">

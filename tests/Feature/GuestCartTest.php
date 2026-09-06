@@ -102,7 +102,7 @@ class GuestCartTest extends TestCase
     public function test_hero_hides_the_button_when_no_cart_accepts_submissions(): void
     {
         Livewire::test('shein.hero')
-            ->assertDontSee('ضع رابط المنتج هنا');
+            ->assertDontSee('هاتي رابط المنتج هنا');
     }
 
     public function test_submitting_a_link_fails_when_no_cart_accepts_submissions(): void
