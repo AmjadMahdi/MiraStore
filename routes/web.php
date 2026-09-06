@@ -1,8 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\CartShowController;
+use App\Http\Controllers\Admin\ProductEditController as AdminProductEditController;
+use App\Http\Controllers\Admin\SheinCartItemsExportController;
+use App\Http\Controllers\Admin\StaffEditController;
+use App\Http\Controllers\Admin\VendorEditController;
+use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\SheinPublicCartController;
 use App\Http\Controllers\StoreProductContactController;
 use App\Http\Controllers\StoreProductController;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\StoreShowController;
+use App\Http\Controllers\Vendor\ProductEditController as VendorProductEditController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
@@ -10,18 +18,9 @@ Route::view('/', 'home')->name('home');
 Route::view('/shein', 'shein.index')->name('shein.index');
 Route::view('/cart', 'shein.cart')->name('shein.cart');
 
-Route::get('/shein/shared/{token}', function (string $token) {
-    $cart = \App\Models\SheinCart::with('items')->where('public_token', $token)->firstOrFail();
+Route::get('/shein/shared/{token}', SheinPublicCartController::class)->name('shein.public-cart');
 
-    return view('shein.public-cart', ['cart' => $cart]);
-})->name('shein.public-cart');
-
-Route::get('/store/{vendor:slug}', function (\App\Models\User $vendor) {
-    abort_unless($vendor->isVendor() && $vendor->is_active, 404);
-
-    return view('store.show', ['vendor' => $vendor]);
-})->name('store.show');
-
+Route::get('/store/{vendor:slug}', StoreShowController::class)->name('store.show');
 Route::get('/store/{vendor:slug}/{product:slug}', StoreProductController::class)->name('store.product');
 Route::get('/store/{vendor:slug}/{product:slug}/contact', StoreProductContactController::class)->name('store.product.contact');
 
@@ -30,14 +29,7 @@ Route::middleware('guest')->group(function () {
     Route::view('/register', 'auth.register')->name('register');
 });
 
-Route::post('/logout', function () {
-    Auth::logout();
-
-    request()->session()->invalidate();
-    request()->session()->regenerateToken();
-
-    return redirect()->route('home');
-})->middleware('auth')->name('logout');
+Route::post('/logout', LogoutController::class)->middleware('auth')->name('logout');
 
 Route::middleware('auth')->prefix('vendor')->name('vendor.')->group(function () {
     Route::view('/status', 'vendor.application-status')->name('status');
@@ -48,9 +40,7 @@ Route::middleware(['auth', 'role:vendor'])->prefix('vendor')->name('vendor.')->g
 
     Route::view('/products', 'vendor.products.index')->name('products.index');
     Route::view('/products/create', 'vendor.products.create')->name('products.create');
-    Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
-        return view('vendor.products.edit', ['product' => $product]);
-    })->name('products.edit');
+    Route::get('/products/{product}/edit', VendorProductEditController::class)->name('products.edit');
 
     Route::view('/analytics', 'vendor.analytics')->name('analytics');
 });
@@ -59,23 +49,15 @@ Route::middleware(['auth', 'role:super_admin,supervisor'])->prefix('admin')->nam
     Route::view('/dashboard', 'admin.dashboard')->name('dashboard');
     Route::view('/products', 'admin.products')->name('products.index');
     Route::view('/products/order', 'admin.products-order')->name('products.order');
-    Route::get('/products/{product}/edit', function (\App\Models\Product $product) {
-        return view('admin.products-edit', ['product' => $product]);
-    })->name('products.edit');
+    Route::get('/products/{product}/edit', AdminProductEditController::class)->name('products.edit');
     Route::view('/carts', 'admin.carts')->name('carts.index');
     Route::view('/carts/create', 'admin.carts-create')->name('carts.create');
-    Route::get('/carts/{cart}', function (\App\Models\SheinCart $cart) {
-        return view('admin.carts-show', ['cart' => $cart]);
-    })->name('carts.show');
-    Route::get('/carts/{cart}/export-items', \App\Http\Controllers\Admin\SheinCartItemsExportController::class)->name('carts.export-items');
+    Route::get('/carts/{cart}', CartShowController::class)->name('carts.show');
+    Route::get('/carts/{cart}/export-items', SheinCartItemsExportController::class)->name('carts.export-items');
     Route::view('/categories', 'admin.categories')->name('categories.index');
     Route::view('/vendors', 'admin.vendors')->name('vendors.index');
     Route::view('/vendors/create', 'admin.vendors-create')->name('vendors.create');
-    Route::get('/vendors/{vendor}/edit', function (\App\Models\User $vendor) {
-        abort_unless($vendor->isVendor(), 404);
-
-        return view('admin.vendors-edit', ['vendor' => $vendor]);
-    })->name('vendors.edit');
+    Route::get('/vendors/{vendor}/edit', VendorEditController::class)->name('vendors.edit');
 
     Route::view('/activity', 'admin.activity')->name('activity.index');
     Route::view('/settings', 'admin.settings')->name('settings.index');
@@ -86,10 +68,6 @@ Route::middleware(['auth', 'role:super_admin,supervisor'])->prefix('admin')->nam
     Route::middleware('role:super_admin')->group(function () {
         Route::view('/staff', 'admin.staff')->name('staff.index');
         Route::view('/staff/create', 'admin.staff-create')->name('staff.create');
-        Route::get('/staff/{staff}/edit', function (\App\Models\User $staff) {
-            abort_unless($staff->isStaff(), 404);
-
-            return view('admin.staff-edit', ['staff' => $staff]);
-        })->name('staff.edit');
+        Route::get('/staff/{staff}/edit', StaffEditController::class)->name('staff.edit');
     });
 });

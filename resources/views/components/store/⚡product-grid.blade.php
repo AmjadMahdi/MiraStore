@@ -39,6 +39,7 @@ new class extends Component
                 ->orderBy('name')
                 ->get(),
             'products' => $this->vendor->products()
+                ->with('currency')
                 ->where('status', 'approved')
                 ->when($this->search, fn ($query) => $query->where('name', 'like', "%{$this->search}%"))
                 ->when($this->categoryId, fn ($query) => $query->where('category_id', $this->categoryId))
@@ -108,9 +109,9 @@ new class extends Component
                     </a>
 
                     <div class="mt-2 flex items-baseline gap-1.5">
-                        <p class="text-base font-semibold text-primary">{{ number_format($product->price, 2) }}</p>
+                        <p class="text-base font-semibold text-primary">{{ number_format($product->price, 2) }} {{ $product->currency->symbol }}</p>
                         @if ($product->compare_at_price)
-                            <p class="text-xs text-disabled line-through">{{ number_format($product->compare_at_price, 2) }}</p>
+                            <p class="text-xs text-disabled line-through">{{ number_format($product->compare_at_price, 2) }} {{ $product->currency->symbol }}</p>
                         @endif
                     </div>
 

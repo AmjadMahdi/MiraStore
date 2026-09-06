@@ -36,7 +36,7 @@ new class extends Component
                 ->whereNull('vendor_tier.deleted_at')
                 ->when($this->search, fn ($query) => $query->where('products.name', 'like', "%{$this->search}%"))
                 ->when($this->categoryId, fn ($query) => $query->where('products.category_id', $this->categoryId))
-                ->with(['vendor', 'images' => fn ($query) => $query->orderBy('sort_order')])
+                ->with(['vendor', 'currency', 'images' => fn ($query) => $query->orderBy('sort_order')])
                 ->orderByDesc('products.is_pinned')
                 ->orderByRaw('case when vendor_tier.is_platform_store then 0 when vendor_tier.is_verified then 1 else 2 end')
                 ->orderBy('products.display_order')
@@ -158,9 +158,9 @@ new class extends Component
                     </p>
 
                     <div class="mt-2 flex items-baseline gap-1.5">
-                        <p class="text-base font-semibold text-primary">{{ number_format($product->price, 2) }}</p>
+                        <p class="text-base font-semibold text-primary">{{ number_format($product->price, 2) }} {{ $product->currency->symbol }}</p>
                         @if ($product->compare_at_price)
-                            <p class="text-xs text-disabled line-through">{{ number_format($product->compare_at_price, 2) }}</p>
+                            <p class="text-xs text-disabled line-through">{{ number_format($product->compare_at_price, 2) }} {{ $product->currency->symbol }}</p>
                         @endif
                     </div>
 

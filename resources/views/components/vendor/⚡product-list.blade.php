@@ -20,7 +20,7 @@ new class extends Component
 
         return [
             'vendor' => $vendor,
-            'products' => $vendor->products()->latest()->get(),
+            'products' => $vendor->products()->with('currency')->latest()->get(),
             'atLimit' => $vendor->max_products_limit !== null
                 && $vendor->products()->count() >= $vendor->max_products_limit,
         ];
@@ -58,7 +58,7 @@ new class extends Component
 
                 <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium text-ink">{{ $product->name }}</p>
-                    <p class="text-sm text-muted">{{ number_format($product->price, 2) }}</p>
+                    <p class="text-sm text-muted">{{ number_format($product->price, 2) }} {{ $product->currency->symbol }}</p>
                 </div>
 
                 <span @class([

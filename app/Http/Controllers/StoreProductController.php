@@ -23,7 +23,7 @@ class StoreProductController extends Controller
             'ip_address' => (string) $request->ip(),
         ]);
 
-        $product->load('images');
+        $product->load(['images', 'currency']);
 
         return view('store.product', ['vendor' => $vendor, 'product' => $product]);
     }

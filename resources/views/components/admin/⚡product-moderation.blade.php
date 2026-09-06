@@ -148,7 +148,7 @@ new class extends Component
     {
         $products = Product::query()
             ->where('status', $this->statusFilter)
-            ->with('vendor')
+            ->with(['vendor', 'currency'])
             ->latest()
             ->paginate(10);
 
@@ -158,7 +158,7 @@ new class extends Component
             'products' => $products,
             'allOnPageSelected' => count($pageIds) > 0 && empty(array_diff($pageIds, $this->selected)),
             'previewingProduct' => $this->previewingProductId
-                ? Product::with(['vendor', 'category'])->find($this->previewingProductId)
+                ? Product::with(['vendor', 'category', 'currency'])->find($this->previewingProductId)
                 : null,
         ];
     }
@@ -262,7 +262,7 @@ new class extends Component
 
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-medium text-ink underline-offset-2 hover:underline">{{ $product->name }}</p>
-                            <p class="text-sm text-muted">{{ $product->vendor->store_name }} &middot; {{ number_format($product->price, 2) }}</p>
+                            <p class="text-sm text-muted">{{ $product->vendor->store_name }} &middot; {{ number_format($product->price, 2) }} {{ $product->currency->symbol }}</p>
                         </div>
                     </button>
                 </div>
@@ -398,9 +398,9 @@ new class extends Component
                     </div>
 
                     <div class="mt-3 flex items-center gap-2">
-                        <span class="text-lg font-semibold text-primary">{{ number_format($previewingProduct->price, 2) }}</span>
+                        <span class="text-lg font-semibold text-primary">{{ number_format($previewingProduct->price, 2) }} {{ $previewingProduct->currency->symbol }}</span>
                         @if ($previewingProduct->compare_at_price)
-                            <span class="text-sm text-disabled line-through">{{ number_format($previewingProduct->compare_at_price, 2) }}</span>
+                            <span class="text-sm text-disabled line-through">{{ number_format($previewingProduct->compare_at_price, 2) }} {{ $previewingProduct->currency->symbol }}</span>
                         @endif
                     </div>
 

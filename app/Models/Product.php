@@ -20,6 +20,7 @@ class Product extends Model
     protected $fillable = [
         'vendor_id',
         'category_id',
+        'currency_id',
         'name',
         'description',
         'price',
@@ -96,6 +97,11 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
     }
 
     public function interactionLogs()

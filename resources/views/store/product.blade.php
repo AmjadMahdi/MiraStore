@@ -68,9 +68,9 @@
             @endif
 
             <div class="mt-2 flex items-center gap-2">
-                <span class="text-lg font-semibold text-primary">{{ number_format($product->price, 2) }}</span>
+                <span class="text-lg font-semibold text-primary">{{ number_format($product->price, 2) }} {{ $product->currency->symbol }}</span>
                 @if ($product->compare_at_price)
-                    <span class="text-sm text-disabled line-through">{{ number_format($product->compare_at_price, 2) }}</span>
+                    <span class="text-sm text-disabled line-through">{{ number_format($product->compare_at_price, 2) }} {{ $product->currency->symbol }}</span>
                 @endif
             </div>
 

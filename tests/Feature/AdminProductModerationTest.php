@@ -191,11 +191,13 @@ class AdminProductModerationTest extends TestCase
         $admin = User::factory()->create(['role' => 'super_admin']);
         $product = $this->approvedProduct();
         $category = \App\Models\Category::factory()->create();
+        $currency = \App\Models\Currency::first();
 
         \Livewire\Livewire::actingAs($admin)
             ->test('vendor.product-form', ['product' => $product])
             ->set('name', 'Renamed Tote')
             ->set('category_id', (string) $category->id)
+            ->set('currency_id', (string) $currency->id)
             ->set('description', $product->description)
             ->set('price', '15')
             ->set('stock_status', 'in_stock')

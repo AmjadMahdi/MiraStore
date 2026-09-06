@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Currency;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,6 +32,7 @@ class VendorProductTest extends TestCase
             ->test('vendor.product-form')
             ->set('name', 'Cute Tote')
             ->set('category_id', (string) $category->id)
+            ->set('currency_id', (string) Currency::where('code', 'YER')->value('id'))
             ->set('description', 'A very nice bag')
             ->set('price', '19.99')
             ->set('stock_status', 'in_stock')
@@ -57,6 +59,7 @@ class VendorProductTest extends TestCase
             ->test('vendor.product-form')
             ->set('name', 'Cute Tote')
             ->set('category_id', (string) $category->id)
+            ->set('currency_id', (string) Currency::where('code', 'YER')->value('id'))
             ->set('description', 'A very nice bag')
             ->set('price', '19.99')
             ->set('newImages', [
@@ -124,6 +127,7 @@ class VendorProductTest extends TestCase
             ->test('vendor.product-form')
             ->set('name', 'Second item')
             ->set('category_id', (string) $category->id)
+            ->set('currency_id', (string) Currency::where('code', 'YER')->value('id'))
             ->set('description', 'desc')
             ->set('price', '5')
             ->set('newImages', [UploadedFile::fake()->image('two.jpg')])

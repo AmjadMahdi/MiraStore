@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Currency;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +29,9 @@ new class extends Component
     #[Validate('required|string|max:2000')]
     public string $description = '';
 
+    #[Validate('required|exists:currencies,id')]
+    public string $currency_id = '';
+
     #[Validate('required|numeric|min:0')]
     public string $price = '';
 
@@ -46,11 +50,12 @@ new class extends Component
     public function mount(?Product $product = null): void
     {
         if ($product?->exists) {
-            abort_unless($product->vendor_id === Auth::id() || Auth::user()->isSuperAdmin(), 403);
+            abort_unless($product->vendor_id === Auth::id() || Auth::user()->isStaff(), 403);
 
             $this->product = $product;
             $this->name = $product->name;
             $this->category_id = (string) $product->category_id;
+            $this->currency_id = (string) $product->currency_id;
             $this->description = $product->description;
             $this->price = (string) $product->price;
             $this->compare_at_price = (string) $product->compare_at_price;
@@ -90,6 +95,7 @@ new class extends Component
         $data = [
             'name' => $this->name,
             'category_id' => $this->category_id,
+            'currency_id' => $this->currency_id,
             'description' => $this->description,
             'price' => $this->price,
             'compare_at_price' => $this->compare_at_price !== '' ? $this->compare_at_price : null,
@@ -105,7 +111,7 @@ new class extends Component
                 $this->revertToPendingIfNeeded($this->product);
             }
 
-            $redirectRoute = Auth::user()->isSuperAdmin() ? 'admin.products.index' : 'vendor.products.index';
+            $redirectRoute = Auth::user()->isStaff() ? 'admin.products.index' : 'vendor.products.index';
             $this->redirect(route($redirectRoute), navigate: true);
 
             return;
@@ -150,6 +156,10 @@ new class extends Component
     {
         return [
             'categories' => Category::orderBy('name')->get(),
+            'currencies' => Currency::where('is_enabled', true)
+                ->when($this->currency_id !== '', fn ($query) => $query->orWhere('id', $this->currency_id))
+                ->orderBy('name')
+                ->get(),
             'existingImages' => $this->product ? $this->product->images()->get() : collect(),
         ];
     }
@@ -180,7 +190,7 @@ new class extends Component
 
     protected function revertToPendingIfNeeded(Product $product): void
     {
-        if (Auth::user()->isSuperAdmin()) {
+        if (Auth::user()->isStaff()) {
             return;
         }
 
@@ -229,6 +239,17 @@ new class extends Component
             <label class="block text-sm font-medium text-ink-soft">الوصف</label>
             <textarea wire:model="description" rows="4" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"></textarea>
             @error('description') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-ink-soft">العملة</label>
+            <select wire:model="currency_id" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+                <option value="">اختر العملة</option>
+                @foreach ($currencies as $currency)
+                    <option value="{{ $currency->id }}">{{ $currency->name }} ({{ $currency->symbol }})</option>
+                @endforeach
+            </select>
+            @error('currency_id') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
 
         <div class="grid grid-cols-2 gap-3">
