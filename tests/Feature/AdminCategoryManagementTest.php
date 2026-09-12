@@ -97,6 +97,47 @@ class AdminCategoryManagementTest extends TestCase
         $this->assertNull($product->fresh()->category_id);
     }
 
+    public function test_admin_can_reorder_categories_by_dragging(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $first = Category::create(['name' => 'الأولى', 'display_order' => 0]);
+        $second = Category::create(['name' => 'الثانية', 'display_order' => 1]);
+        $third = Category::create(['name' => 'الثالثة', 'display_order' => 2]);
+
+        // Drag the first item (index 0) to the last position (index 2).
+        Livewire::actingAs($admin)
+            ->test('admin.category-management')
+            ->call('moveCategory', 0, 2);
+
+        $ordered = Category::orderBy('display_order')->pluck('id')->all();
+        $this->assertSame([$second->id, $third->id, $first->id], $ordered);
+    }
+
+    public function test_categories_appear_in_the_configured_order_on_the_homepage(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $zCategory = Category::create(['name' => 'ز - فئة أخيرة أبجدياً', 'display_order' => 0]);
+        $aCategory = Category::create(['name' => 'أ - فئة أولى أبجدياً', 'display_order' => 1]);
+
+        Product::create([
+            'vendor_id' => $vendor->id, 'category_id' => $zCategory->id, 'name' => 'P1',
+            'description' => 'd', 'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+        ]);
+        Product::create([
+            'vendor_id' => $vendor->id, 'category_id' => $aCategory->id, 'name' => 'P2',
+            'description' => 'd', 'price' => 10, 'image_path' => 'products/b.jpg', 'status' => 'approved',
+        ]);
+
+        $html = Livewire::test('product-grid')->html();
+
+        // Even though "ز" sorts after "أ" alphabetically, display_order 0
+        // means it must appear first in the rendered category tabs.
+        $this->assertTrue(
+            strpos($html, $zCategory->name) < strpos($html, $aCategory->name),
+            'Expected the category with the lower display_order to appear first.'
+        );
+    }
+
     public function test_vendor_cannot_access_category_management(): void
     {
         $vendor = User::factory()->create(['role' => 'vendor']);

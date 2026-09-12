@@ -1,13 +1,8 @@
 <x-layouts.app :title="$cart->cart_name">
     <div class="mx-auto max-w-md p-6 sm:p-8">
         @php
-            $steps = \App\Models\SheinCart::STATUSES;
-            $stepLabels = [
-                'open' => 'مفتوحة',
-                'ordered' => 'تم الطلب',
-                'in_transit' => 'في الطريق',
-                'arrived' => 'تم الوصول',
-            ];
+            $steps = \App\Models\SheinCart::statuses();
+            $stepLabels = \App\Models\SheinCart::statusLabels();
             $currentIndex = array_search($cart->status, $steps);
         @endphp
 

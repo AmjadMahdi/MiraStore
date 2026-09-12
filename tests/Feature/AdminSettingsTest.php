@@ -60,4 +60,65 @@ class AdminSettingsTest extends TestCase
             ->get(route('vendor.status'))
             ->assertSee('https://wa.me/967777123456', false);
     }
+
+    public function test_admin_can_set_multiple_hero_titles_and_the_subtitle_and_button_text(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->set('hero_titles', ['العنوان الأول', 'العنوان الثاني'])
+            ->set('hero_subtitle', 'نص فرعي جديد')
+            ->set('hero_button_text', 'اضغط هنا')
+            ->call('save')
+            ->assertSet('justSaved', true);
+
+        $this->assertSame(['العنوان الأول', 'العنوان الثاني'], Setting::getArray('hero_titles'));
+        $this->assertSame('نص فرعي جديد', Setting::get('hero_subtitle'));
+        $this->assertSame('اضغط هنا', Setting::get('hero_button_text'));
+    }
+
+    public function test_admin_can_add_and_remove_hero_titles(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        $component = Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->call('addTitle')
+            ->assertCount('hero_titles', 2);
+
+        $component->call('removeTitle', 0)
+            ->assertCount('hero_titles', 1);
+    }
+
+    public function test_hero_titles_require_at_least_one_non_empty_entry(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->set('hero_titles', [''])
+            ->call('save')
+            ->assertHasErrors(['hero_titles.0' => 'required']);
+    }
+
+    public function test_hero_shows_configured_titles_subtitle_and_button_text(): void
+    {
+        Setting::setArray('hero_titles', ['عنوان مخصص أول', 'عنوان مخصص ثاني']);
+        Setting::set('hero_subtitle', 'نص فرعي مخصص');
+        Setting::set('hero_button_text', 'زر مخصص');
+
+        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        $html = Livewire::test('shein.hero')->html();
+
+        // The titles are passed to Alpine via @js(), which JSON.parse()-wraps
+        // and escapes unicode twice — so check for that encoded form, not the
+        // literal text.
+        $this->assertStringContainsString(str_replace('\\', '\\\\', trim(json_encode('عنوان مخصص أول'), '"')), $html);
+        $this->assertStringContainsString(str_replace('\\', '\\\\', trim(json_encode('عنوان مخصص ثاني'), '"')), $html);
+        $this->assertStringContainsString('نص فرعي مخصص', $html);
+        $this->assertStringContainsString('زر مخصص', $html);
+    }
 }

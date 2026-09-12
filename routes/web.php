@@ -6,12 +6,17 @@ use App\Http\Controllers\Admin\SheinCartItemsExportController;
 use App\Http\Controllers\Admin\StaffEditController;
 use App\Http\Controllers\Admin\VendorEditController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\SheinPublicCartController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StoreProductContactController;
 use App\Http\Controllers\StoreProductController;
 use App\Http\Controllers\StoreShowController;
 use App\Http\Controllers\Vendor\ProductEditController as VendorProductEditController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/robots.txt', RobotsController::class)->name('robots');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::view('/', 'home')->name('home');
 

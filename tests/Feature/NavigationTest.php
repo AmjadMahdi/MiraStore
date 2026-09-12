@@ -30,12 +30,12 @@ class NavigationTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
-            ->assertSee('سلال شي إن')
+            ->assertSee('سلال Shein')
             ->assertSee('سجل النشاط');
 
         $this->actingAs($admin)
             ->get(route('home'))
-            ->assertDontSee('سلال شي إن');
+            ->assertDontSee('سلال Shein');
     }
 
     public function test_guest_sees_no_sub_nav(): void

@@ -19,12 +19,12 @@ class SheinCartFactory extends Factory
     {
         return [
             'cart_name' => $this->faker->randomElement([
-                'ملابس الصيف', 'مستلزمات الشتاء', 'طلبي من شي إن',
+                'ملابس الصيف', 'مستلزمات الشتاء', 'طلبي من Shein',
                 'العودة إلى المدرسة', 'تسوق العيد', 'هدايا عيد ميلاد',
             ]),
             'customer_phone' => '+9677'.$this->faker->numerify('#######'),
             'cart_details' => 'https://shein.com/cart/'.$this->faker->uuid(),
-            'status' => $this->faker->randomElement(SheinCart::STATUSES),
+            'status' => $this->faker->randomElement(SheinCart::statuses()),
         ];
     }
 }

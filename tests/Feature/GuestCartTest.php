@@ -30,7 +30,7 @@ class GuestCartTest extends TestCase
             ->set('link', 'https://shein.com/item/1')
             ->set('quantity', '2')
             ->set('specifications', 'المقاس M')
-            ->set('customerPhone', '511234567')
+            ->set('customerPhone', '711234567')
             ->call('addToCart')
             ->assertSet('link', '')
             ->assertSet('justAdded', true);
@@ -40,7 +40,7 @@ class GuestCartTest extends TestCase
             'link' => 'https://shein.com/item/1',
             'quantity' => 2,
             'name' => 'المقاس M',
-            'customer_phone' => '+967 511234567',
+            'customer_phone' => '+967 711234567',
         ]);
     }
 
@@ -97,6 +97,84 @@ class GuestCartTest extends TestCase
 
         $this->assertContains('حقل رابط المنتج مطلوب.', $errors);
         $this->assertNotContains('حقل link مطلوب.', $errors);
+    }
+
+    public function test_customer_phone_must_start_with_7_and_be_exactly_nine_digits(): void
+    {
+        $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        // Doesn't start with 7.
+        Livewire::test('shein.hero')
+            ->set('link', 'https://shein.com/item/1')
+            ->set('customerPhone', '511234567')
+            ->call('addToCart')
+            ->assertHasErrors('customerPhone');
+
+        // Too short.
+        Livewire::test('shein.hero')
+            ->set('link', 'https://shein.com/item/1')
+            ->set('customerPhone', '71234567')
+            ->call('addToCart')
+            ->assertHasErrors('customerPhone');
+
+        // Too long.
+        Livewire::test('shein.hero')
+            ->set('link', 'https://shein.com/item/1')
+            ->set('customerPhone', '7123456789')
+            ->call('addToCart')
+            ->assertHasErrors('customerPhone');
+
+        // Exactly 9 digits, starts with 7 — valid.
+        Livewire::test('shein.hero')
+            ->set('link', 'https://shein.com/item/1')
+            ->set('customerPhone', '712345678')
+            ->call('addToCart')
+            ->assertHasNoErrors('customerPhone');
+    }
+
+    public function test_customer_phone_error_appears_live_while_typing_not_only_on_submit(): void
+    {
+        $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        // Just setting the property (as the live-bound input does on every
+        // keystroke) should surface the error immediately — no need to
+        // click "addToCart" first.
+        Livewire::test('shein.hero')
+            ->set('customerPhone', '5')
+            ->assertHasErrors('customerPhone');
+    }
+
+    public function test_link_cannot_contain_arabic_characters(): void
+    {
+        $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        Livewire::test('shein.hero')
+            ->set('link', 'https://shein.com/item/1')
+            ->set('customerPhone', '712345678')
+            ->call('addToCart')
+            ->assertHasNoErrors('link');
+
+        Livewire::test('shein.hero')
+            ->set('link', 'رابط بالعربي')
+            ->set('customerPhone', '712345678')
+            ->call('addToCart')
+            ->assertHasErrors('link');
+    }
+
+    public function test_link_error_appears_live_while_typing_not_only_on_submit(): void
+    {
+        $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        // Just setting the property (as the live-bound input does on every
+        // keystroke) should surface the error immediately — no need to
+        // click "addToCart" first.
+        Livewire::test('shein.hero')
+            ->set('link', 'رابط')
+            ->assertHasErrors('link');
     }
 
     public function test_hero_hides_the_button_when_no_cart_accepts_submissions(): void
@@ -175,7 +253,7 @@ class GuestCartTest extends TestCase
             ->set('cart_name', 'طلبي من Shein')
             ->set('customer_phone', '+9677700000')
             ->call('confirmOrder')
-            ->assertSet('confirmedCartNumber', fn ($value) => str_starts_with($value, 'MIRA-'));
+            ->assertSet('confirmedCartNumber', fn ($value) => str_starts_with($value, 'mira-'));
 
         $this->assertDatabaseHas('shein_carts', [
             'cart_name' => 'طلبي من Shein',

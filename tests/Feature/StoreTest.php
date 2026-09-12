@@ -65,6 +65,60 @@ class StoreTest extends TestCase
         ]);
     }
 
+    public function test_product_page_shows_in_stock_badge_by_default(): void
+    {
+        $product = $this->approvedProduct();
+
+        $this->get(route('store.product', [$product->vendor, $product]))
+            ->assertOk()
+            ->assertSee('متوفر');
+    }
+
+    public function test_product_page_shows_pre_order_badge(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $product = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'Cute Tote', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+            'stock_status' => 'pre_order',
+        ]);
+
+        $this->get(route('store.product', [$vendor, $product]))
+            ->assertOk()
+            ->assertSee('طلب مسبق')
+            ->assertDontSee('متوفر');
+    }
+
+    public function test_product_page_shows_out_of_stock_badge(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $product = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'Cute Tote', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+            'stock_status' => 'out_of_stock',
+        ]);
+
+        $this->get(route('store.product', [$vendor, $product]))
+            ->assertOk()
+            ->assertSee('نفدت الكمية')
+            ->assertDontSee('متوفر');
+    }
+
+    public function test_product_page_shows_labeled_options_when_present(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $product = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'Cute Tote', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+            'options' => 'المقاس: M، اللون: أزرق',
+        ]);
+
+        $this->get(route('store.product', [$vendor, $product]))
+            ->assertOk()
+            ->assertSee('الخيارات')
+            ->assertSee('المقاس: M، اللون: أزرق');
+    }
+
     public function test_pending_product_page_is_not_publicly_visible(): void
     {
         $vendor = User::factory()->create(['role' => 'vendor']);
@@ -141,6 +195,31 @@ class StoreTest extends TestCase
             ->assertSee('-33%')
             ->assertSee('تواصل عبر واتساب')
             ->assertSee(route('store.product.contact', [$vendor, $product]), false);
+    }
+
+    public function test_homepage_grid_card_shows_stock_status_badge(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+
+        $inStock = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'In Stock Item', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/a.jpg', 'status' => 'approved',
+        ]);
+        $preOrder = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'Pre Order Item', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/b.jpg', 'status' => 'approved',
+            'stock_status' => 'pre_order',
+        ]);
+        $outOfStock = Product::create([
+            'vendor_id' => $vendor->id, 'name' => 'Sold Out Item', 'description' => 'd',
+            'price' => 10, 'image_path' => 'products/c.jpg', 'status' => 'approved',
+            'stock_status' => 'out_of_stock',
+        ]);
+
+        Livewire::test('product-grid')
+            ->assertSee('متوفر')
+            ->assertSee('طلب مسبق')
+            ->assertSee('نفدت الكمية');
     }
 
     public function test_homepage_grid_card_shows_a_trusted_badge_for_verified_vendors(): void

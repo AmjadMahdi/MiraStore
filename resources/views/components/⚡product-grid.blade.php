@@ -27,7 +27,7 @@ new class extends Component
     public function with(): array
     {
         return [
-            'categories' => Category::orderBy('name')->get(),
+            'categories' => Category::orderBy('display_order')->get(),
             'products' => Product::query()
                 ->select('products.*')
                 ->join('users as vendor_tier', 'vendor_tier.id', '=', 'products.vendor_id')
@@ -87,12 +87,6 @@ new class extends Component
         </div>
     </div>
 
-    <div class="mx-auto max-w-6xl px-4">
-        <div class="mt-4 rounded-lg bg-surface p-4 text-sm text-ink">
-            اطلب سلة شي إن بدون عمولة اليوم! <a href="{{ route('shein.index') }}" class="font-semibold underline">ابدأ الآن &larr;</a>
-        </div>
-    </div>
-
     <div class="mx-auto grid max-w-6xl grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4" wire:loading.class="opacity-50">
         @forelse ($products as $product)
             @php
@@ -119,7 +113,7 @@ new class extends Component
                     <div class="relative aspect-square w-full overflow-hidden bg-surface">
                         @if (count($imageUrls) > 1)
                             <template x-for="(image, i) in images" :key="i">
-                                <img :src="image" x-show="active === i" x-transition.opacity.duration.500ms alt="{{ $product->name }}" class="product-card-image absolute inset-0 h-full w-full object-cover">
+                                <img :src="image" x-show="active === i" x-transition.opacity.duration.500ms alt="{{ $product->name }} - {{ $product->vendor->store_name }} - تعز" class="product-card-image absolute inset-0 h-full w-full object-cover">
                             </template>
 
                             <div class="absolute inset-x-0 bottom-2 flex items-center justify-center gap-1">
@@ -128,7 +122,7 @@ new class extends Component
                                 </template>
                             </div>
                         @else
-                            <img src="{{ $imageUrls[0] }}" alt="{{ $product->name }}" class="product-card-image h-full w-full object-cover">
+                            <img src="{{ $imageUrls[0] }}" alt="{{ $product->name }} - {{ $product->vendor->store_name }} - تعز" class="product-card-image h-full w-full object-cover">
                         @endif
 
                         @if ($discountPercent)
@@ -141,6 +135,8 @@ new class extends Component
                             <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-discount shadow-sm backdrop-blur-sm">طلب مسبق</span>
                         @elseif ($product->stock_status === 'out_of_stock')
                             <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-muted shadow-sm backdrop-blur-sm">نفدت الكمية</span>
+                        @else
+                            <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-green-700 shadow-sm backdrop-blur-sm">متوفر</span>
                         @endif
                     </div>
                 </a>

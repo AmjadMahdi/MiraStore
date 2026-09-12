@@ -36,7 +36,7 @@ new class extends Component
     {
         return [
             'categories' => Category::whereHas('products', fn ($query) => $query->where('vendor_id', $this->vendor->id)->where('status', 'approved'))
-                ->orderBy('name')
+                ->orderBy('display_order')
                 ->get(),
             'products' => $this->vendor->products()
                 ->with('currency')
@@ -88,7 +88,7 @@ new class extends Component
             >
                 <a href="{{ route('store.product', [$vendor, $product]) }}" class="block">
                     <div class="relative aspect-square w-full overflow-hidden bg-surface">
-                        <img src="{{ Storage::url($product->image_path) }}" alt="{{ $product->name }}" class="product-card-image h-full w-full object-cover">
+                        <img src="{{ Storage::url($product->image_path) }}" alt="{{ $product->name }} - {{ $vendor->store_name }} - تعز" class="product-card-image h-full w-full object-cover">
 
                         @if ($discountPercent)
                             <span class="absolute start-2 top-2 rounded-md bg-discount px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
@@ -100,6 +100,8 @@ new class extends Component
                             <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-discount shadow-sm backdrop-blur-sm">طلب مسبق</span>
                         @elseif ($product->stock_status === 'out_of_stock')
                             <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-muted shadow-sm backdrop-blur-sm">نفدت الكمية</span>
+                        @else
+                            <span class="absolute end-2 top-2 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-green-700 shadow-sm backdrop-blur-sm">متوفر</span>
                         @endif
                     </div>
                 </a>

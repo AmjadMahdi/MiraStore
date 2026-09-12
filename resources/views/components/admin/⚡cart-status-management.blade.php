@@ -1,18 +1,21 @@
 <?php
 
-use App\Models\Category;
+use App\Models\SheinCart;
+use App\Models\SheinCartStatus;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 new class extends Component
 {
-    public string $name = '';
+    public string $label = '';
 
     #[Locked]
     public ?int $editingId = null;
 
-    public string $editingName = '';
+    public string $editingLabel = '';
+
+    public string $deleteBlockedMessage = '';
 
     /** @var array<int, int> */
     public array $orderedIds = [];
@@ -24,56 +27,73 @@ new class extends Component
 
     protected function refreshOrderedIds(): void
     {
-        $this->orderedIds = Category::orderBy('display_order')->pluck('id')->all();
+        $this->orderedIds = SheinCartStatus::orderBy('display_order')->pluck('id')->all();
     }
 
-    public function addCategory(): void
+    public function addStatus(): void
     {
-        $this->validate(['name' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')]]);
+        $this->validate(['label' => ['required', 'string', 'max:255', Rule::unique('shein_cart_statuses', 'label')]]);
 
-        $nextOrder = ((int) Category::max('display_order')) + 1;
+        $nextOrder = ((int) SheinCartStatus::max('display_order')) + 1;
 
-        Category::create(['name' => $this->name, 'display_order' => $nextOrder]);
+        SheinCartStatus::create([
+            'key' => SheinCartStatus::generateKey(),
+            'label' => $this->label,
+            'display_order' => $nextOrder,
+        ]);
 
-        $this->name = '';
+        $this->label = '';
         $this->refreshOrderedIds();
     }
 
-    public function startEdit(Category $category): void
+    public function startEdit(SheinCartStatus $status): void
     {
-        $this->editingId = $category->id;
-        $this->editingName = $category->name;
+        $this->editingId = $status->id;
+        $this->editingLabel = $status->label;
     }
 
     public function cancelEdit(): void
     {
         $this->editingId = null;
-        $this->editingName = '';
+        $this->editingLabel = '';
     }
 
-    public function updateCategory(): void
+    public function updateStatus(): void
     {
-        $category = Category::findOrFail($this->editingId);
+        $status = SheinCartStatus::findOrFail($this->editingId);
 
         $this->validate([
-            'editingName' => ['required', 'string', 'max:255', Rule::unique('categories', 'name')->ignore($category->id)],
+            'editingLabel' => ['required', 'string', 'max:255', Rule::unique('shein_cart_statuses', 'label')->ignore($status->id)],
         ]);
 
-        $category->update(['name' => $this->editingName]);
+        $status->update(['label' => $this->editingLabel]);
 
         $this->cancelEdit();
     }
 
-    public function deleteCategory(Category $category): void
+    public function deleteStatus(SheinCartStatus $status): void
     {
-        // products.category_id has a DB-level nullOnDelete FK, so linked
-        // products simply lose their category rather than being blocked/deleted.
-        $category->delete();
+        $this->deleteBlockedMessage = '';
 
+        if (SheinCartStatus::count() <= 1) {
+            $this->deleteBlockedMessage = 'يجب أن تبقى حالة واحدة على الأقل.';
+
+            return;
+        }
+
+        $cartsUsingStatus = SheinCart::where('status', $status->key)->count();
+
+        if ($cartsUsingStatus > 0) {
+            $this->deleteBlockedMessage = "لا يمكن حذف \"{$status->label}\" لأنها مستخدمة في {$cartsUsingStatus} سلة حالياً — غيّر حالة تلك السلال أولاً.";
+
+            return;
+        }
+
+        $status->delete();
         $this->refreshOrderedIds();
     }
 
-    public function moveCategory(int $from, int $to): void
+    public function moveStatus(int $from, int $to): void
     {
         if ($from === $to || ! array_key_exists($from, $this->orderedIds) || ! array_key_exists($to, $this->orderedIds)) {
             return;
@@ -86,39 +106,48 @@ new class extends Component
         $this->orderedIds = $ids;
 
         foreach ($this->orderedIds as $index => $id) {
-            Category::whereKey($id)->update(['display_order' => $index]);
+            SheinCartStatus::whereKey($id)->update(['display_order' => $index]);
         }
     }
 
     public function with(): array
     {
-        $categories = Category::withCount('products')->whereIn('id', $this->orderedIds)->get()->keyBy('id');
+        $cartCounts = SheinCart::selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status');
+
+        $statuses = SheinCartStatus::whereIn('id', $this->orderedIds)->get()->keyBy('id');
 
         return [
-            'categories' => collect($this->orderedIds)->map(fn ($id) => $categories->get($id))->filter()->values(),
+            'statuses' => collect($this->orderedIds)->map(fn ($id) => $statuses->get($id))->filter()->values(),
+            'cartCounts' => $cartCounts,
         ];
     }
 };
 ?>
 
 <div class="mx-auto max-w-2xl p-6 sm:p-8">
-    <h1 class="text-2xl font-bold tracking-tight text-ink">الفئات</h1>
-    <p class="mt-1 text-sm text-muted">اسحب الفئات لتغيير ترتيب ظهورها للعميل في الصفحة الرئيسية وصفحة كل متجر.</p>
+    <h1 class="text-2xl font-bold tracking-tight text-ink">حالات السلة</h1>
+    <p class="mt-1 text-sm text-muted">اسحب الحالات لتغيير ترتيب مراحل تتبع الطلب التي يراها العميل.</p>
 
-    <form wire:submit="addCategory" class="mt-6 flex items-start gap-2">
+    @if ($deleteBlockedMessage)
+        <div class="mt-4 rounded-lg border border-discount bg-discount-light p-3">
+            <p class="text-sm font-semibold text-discount">{{ $deleteBlockedMessage }}</p>
+        </div>
+    @endif
+
+    <form wire:submit="addStatus" class="mt-6 flex items-start gap-2">
         <div class="flex-1">
             <input
                 type="text"
-                wire:model="name"
-                placeholder="اسم الفئة الجديدة"
+                wire:model="label"
+                placeholder="اسم الحالة الجديدة"
                 class="w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
             >
-            @error('name') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+            @error('label') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
         <button
             type="submit"
             wire:loading.attr="disabled"
-            wire:target="addCategory"
+            wire:target="addStatus"
             class="flex-shrink-0 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
         >
             + إضافة
@@ -126,23 +155,23 @@ new class extends Component
     </form>
 
     <div class="mt-6 space-y-2" x-data="{ dragIndex: null }">
-        @forelse ($categories as $index => $category)
+        @forelse ($statuses as $index => $status)
             <div
                 draggable="true"
                 x-on:dragstart="dragIndex = {{ $index }}"
                 x-on:dragover.prevent
-                x-on:drop="if (dragIndex !== null) { $wire.moveCategory(dragIndex, {{ $index }}); dragIndex = null }"
+                x-on:drop="if (dragIndex !== null) { $wire.moveStatus(dragIndex, {{ $index }}); dragIndex = null }"
                 class="cursor-move rounded-lg border border-line-medium bg-white p-3 transition hover:bg-surface"
             >
-                @if ($editingId === $category->id)
-                    <form wire:submit="updateCategory" class="flex items-start gap-2" x-on:dragstart.stop x-on:mousedown.stop>
+                @if ($editingId === $status->id)
+                    <form wire:submit="updateStatus" class="flex items-start gap-2" x-on:dragstart.stop x-on:mousedown.stop>
                         <div class="flex-1">
                             <input
                                 type="text"
-                                wire:model="editingName"
+                                wire:model="editingLabel"
                                 class="w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black"
                             >
-                            @error('editingName') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            @error('editingLabel') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                         </div>
                         <button type="submit" class="flex-shrink-0 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-hover">
                             حفظ
@@ -158,15 +187,15 @@ new class extends Component
                                 <path d="M7 4a1 1 0 11-2 0 1 1 0 012 0zM7 10a1 1 0 11-2 0 1 1 0 012 0zM7 16a1 1 0 11-2 0 1 1 0 012 0zM15 4a1 1 0 11-2 0 1 1 0 012 0zM15 10a1 1 0 11-2 0 1 1 0 012 0zM15 16a1 1 0 11-2 0 1 1 0 012 0z" />
                             </svg>
                             <div class="min-w-0">
-                                <p class="truncate text-sm font-medium text-ink">{{ $category->name }}</p>
-                                <p class="text-xs text-muted">{{ $category->products_count }} منتج</p>
+                                <p class="truncate text-sm font-medium text-ink">{{ $status->label }}</p>
+                                <p class="text-xs text-muted">{{ $cartCounts[$status->key] ?? 0 }} سلة</p>
                             </div>
                         </div>
 
                         <div class="flex flex-shrink-0 items-center gap-2">
                             <button
                                 type="button"
-                                wire:click="startEdit({{ $category->id }})"
+                                wire:click="startEdit({{ $status->id }})"
                                 x-on:mousedown.stop
                                 class="rounded-lg border border-line-medium px-2.5 py-1 text-xs font-medium text-ink-soft"
                             >
@@ -190,16 +219,16 @@ new class extends Component
                                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
                                 >
                                     <div class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-                                        <p class="text-base font-medium text-ink">حذف فئة "{{ $category->name }}"؟</p>
-                                        @if ($category->products_count > 0)
+                                        <p class="text-base font-medium text-ink">حذف حالة "{{ $status->label }}"؟</p>
+                                        @if (($cartCounts[$status->key] ?? 0) > 0)
                                             <p class="mt-1 text-sm text-muted">
-                                                {{ $category->products_count }} منتج مرتبط بهذه الفئة سيصبح بدون فئة.
+                                                {{ $cartCounts[$status->key] }} سلة تستخدم هذه الحالة حالياً — لا يمكن الحذف قبل تغيير حالتها.
                                             </p>
                                         @endif
                                         <div class="mt-4 flex gap-2">
                                             <button
                                                 type="button"
-                                                x-on:click="confirming = false; $wire.deleteCategory({{ $category->id }})"
+                                                x-on:click="confirming = false; $wire.deleteStatus({{ $status->id }})"
                                                 class="flex-1 rounded-lg bg-discount py-2 text-sm font-semibold text-white transition hover:opacity-90"
                                             >
                                                 حذف
@@ -222,7 +251,7 @@ new class extends Component
                 @endif
             </div>
         @empty
-            <p class="py-10 text-center text-sm text-disabled">لا توجد فئات بعد.</p>
+            <p class="py-10 text-center text-sm text-disabled">لا توجد حالات بعد.</p>
         @endforelse
     </div>
 </div>

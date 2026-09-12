@@ -75,7 +75,8 @@ class DatabaseSeeder extends Seeder
 
         SheinCart::factory()->count(3)->create(['status' => 'open']);
         SheinCart::factory()->count(2)->create(['status' => 'ordered']);
-        SheinCart::factory()->count(2)->create(['status' => 'in_transit']);
+        SheinCart::factory()->count(1)->create(['status' => 'in_transit_sa']);
+        SheinCart::factory()->count(1)->create(['status' => 'in_transit_ye']);
         SheinCart::factory()->count(3)->create(['status' => 'arrived']);
     }
 }

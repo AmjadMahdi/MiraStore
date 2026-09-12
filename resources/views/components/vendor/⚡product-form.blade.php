@@ -155,7 +155,7 @@ new class extends Component
     public function with(): array
     {
         return [
-            'categories' => Category::orderBy('name')->get(),
+            'categories' => Category::orderBy('display_order')->get(),
             'currencies' => Currency::where('is_enabled', true)
                 ->when($this->currency_id !== '', fn ($query) => $query->orWhere('id', $this->currency_id))
                 ->orderBy('name')
@@ -275,7 +275,9 @@ new class extends Component
             <select wire:model="stock_status" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
                 <option value="in_stock">متوفر</option>
                 <option value="pre_order">طلب مسبق</option>
-                <option value="out_of_stock">نفدت الكمية</option>
+                @if ($stock_status === 'out_of_stock')
+                    <option value="out_of_stock">نفدت الكمية</option>
+                @endif
             </select>
         </div>
 

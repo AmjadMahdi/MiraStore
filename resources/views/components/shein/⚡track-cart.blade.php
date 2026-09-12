@@ -7,7 +7,7 @@ use Livewire\Component;
 
 new class extends Component
 {
-    #[Validate('required|string|max:20')]
+    #[Validate('required|string|regex:/^[0-9]{7,9}$/')]
     public string $customer_phone = '';
 
     #[Validate('required|string|max:20')]
@@ -31,10 +31,24 @@ new class extends Component
 
         RateLimiter::hit($key, 60);
 
-        $this->cart = SheinCart::where('cart_number', $this->cart_number)
-            ->where('customer_phone', $this->customer_phone)
-            ->first();
+        // The country code is fixed in the UI (the customer only types the
+        // local 9 digits), but phones are stored in a handful of formats
+        // ("+967 7xxxxxxxx", "+9677xxxxxxxx", ...) — so match on digits
+        // only rather than the exact string.
+        $normalizedInput = '967'.$this->customer_phone;
 
+        $cart = SheinCart::where('cart_number', $this->cart_number)->with('items')->first();
+
+        // A visitor who added a link via the homepage "Add Link" flow into
+        // a shared open cart recorded their own phone on that item, not on
+        // the cart itself (the cart's phone belongs to whoever the cart was
+        // created for) — so a match on either one counts.
+        $matches = $cart && (
+            preg_replace('/\D/', '', $cart->customer_phone) === $normalizedInput
+            || $cart->items->contains(fn ($item) => $item->customer_phone && preg_replace('/\D/', '', $item->customer_phone) === $normalizedInput)
+        );
+
+        $this->cart = $matches ? $cart : null;
         $this->notFound = $this->cart === null;
     }
 
@@ -48,75 +62,136 @@ new class extends Component
 <div class="mx-auto max-w-md p-6 sm:p-8">
     @if ($cart)
         @php
-            $steps = \App\Models\SheinCart::STATUSES;
-            $stepLabels = [
-                'open' => 'مفتوحة',
-                'ordered' => 'تم الطلب',
-                'in_transit' => 'في الطريق',
-                'arrived' => 'تم الوصول',
-            ];
+            $steps = \App\Models\SheinCart::statuses();
+            $stepLabels = \App\Models\SheinCart::statusLabels();
             $currentIndex = array_search($cart->status, $steps);
+            $currentStatus = \App\Models\SheinCartStatus::where('key', $cart->status)->first();
         @endphp
 
-        <div>
-            <p class="text-sm text-muted">{{ $cart->cart_name }} &middot; {{ $cart->cart_number }}</p>
+        <div class="rounded-2xl border border-line-medium bg-white p-5 shadow-sm sm:p-6">
+            <div class="flex items-center justify-between gap-3">
+                <p class="min-w-0 truncate text-base font-semibold text-ink">{{ $cart->cart_name }}</p>
+                <span class="flex-shrink-0 rounded-md bg-surface px-2 py-1 font-mono text-xs font-medium text-muted" dir="ltr">
+                    {{ $cart->cart_number }}
+                </span>
+            </div>
+            <p class="mt-0.5 text-xs text-disabled">آخر تحديث {{ $cart->updated_at->diffForHumans() }}</p>
 
-            <div class="mt-4 flex items-center justify-between">
+            <div @class([
+                'mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold',
+                $currentStatus?->pillClasses() ?? 'bg-surface text-muted',
+            ])>
+                <span @class(['h-1.5 w-1.5 flex-shrink-0 rounded-full', $currentStatus?->dotClasses() ?? 'bg-disabled'])></span>
+                {{ $currentStatus?->label ?? $cart->status }}
+            </div>
+
+            <div class="mt-5 flex items-center justify-between">
                 @foreach ($steps as $i => $step)
                     <div class="flex flex-1 flex-col items-center">
                         <div @class([
-                            'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
+                            'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors',
                             'bg-primary text-white' => $i <= $currentIndex,
                             'bg-line-medium text-disabled' => $i > $currentIndex,
                         ])>
                             {{ $i + 1 }}
                         </div>
-                        <p class="mt-1 text-center text-xs text-muted">{{ $stepLabels[$step] }}</p>
+                        <p class="mt-1.5 text-center text-[11px] leading-tight text-muted">{{ $stepLabels[$step] }}</p>
                     </div>
 
                     @if (! $loop->last)
                         <div @class([
-                            'h-0.5 flex-1',
+                            'mb-4 h-0.5 flex-1 transition-colors',
                             'bg-primary' => $i < $currentIndex,
                             'bg-line-medium' => $i >= $currentIndex,
                         ])></div>
                     @endif
                 @endforeach
             </div>
+
+            @if ($cart->public_token)
+                <a
+                    href="{{ route('shein.public-cart', $cart->public_token) }}"
+                    class="mt-5 flex items-center justify-center gap-1.5 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                >
+                    عرض تفاصيل السلة
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+            @endif
         </div>
 
-        <button type="button" wire:click="reset_" class="mt-6 text-sm text-muted underline">
+        <button
+            type="button"
+            wire:click="reset_"
+            class="mx-auto mt-5 flex items-center justify-center gap-1.5 text-sm font-medium text-muted transition hover:text-ink"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-6.36M20 15a9 9 0 01-14.13 6.36" />
+            </svg>
             تتبع سلة أخرى
         </button>
     @else
-        <form wire:submit="track" class="space-y-4">
-            <h2 class="text-lg font-semibold text-ink">تتبع طلبك</h2>
+        <div class="rounded-2xl border border-line-medium bg-white p-5 shadow-sm sm:p-6">
+            <h2 class="text-lg font-bold tracking-tight text-ink">تتبع طلبك</h2>
+            <p class="mt-0.5 text-xs text-muted">أدخل رقم هاتفك ورقم السلة لعرض حالة طلبك</p>
 
-            <div>
-                <label class="block text-sm font-medium text-ink-soft">رقم الهاتف</label>
-                <input type="text" wire:model="customer_phone" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
-                @error('customer_phone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
-            </div>
+            <form wire:submit="track" class="mt-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-ink-soft">رقم الهاتف</label>
+                    <div class="mt-1.5 flex gap-2" dir="ltr">
+                        <div class="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-line-medium bg-surface px-2 py-2.5 text-base text-ink-soft">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 16" class="h-3.5 w-5 flex-shrink-0 rounded-sm"><rect width="24" height="16" fill="#fff" /><rect width="24" height="5.33" fill="#CE1126" /><rect y="10.67" width="24" height="5.33" fill="#000" /></svg>
+                            <span>+967</span>
+                        </div>
+                        <input
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="9"
+                            wire:model="customer_phone"
+                            placeholder="7xxxxxxxx"
+                            @class([
+                                'w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                                'border-discount' => $errors->has('customer_phone'),
+                                'border-line-medium' => ! $errors->has('customer_phone'),
+                            ])
+                        >
+                    </div>
+                    @error('customer_phone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                </div>
 
-            <div>
-                <label class="block text-sm font-medium text-ink-soft">رقم السلة</label>
-                <input type="text" wire:model="cart_number" placeholder="MIRA-12345" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black" dir="ltr">
-                @error('cart_number') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
-            </div>
+                <div>
+                    <label class="block text-sm font-medium text-ink-soft">رقم السلة</label>
+                    <input
+                        type="text"
+                        wire:model="cart_number"
+                        placeholder="mira-10"
+                        dir="ltr"
+                        @class([
+                            'mt-1.5 w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
+                            'border-discount' => $errors->has('cart_number'),
+                            'border-line-medium' => ! $errors->has('cart_number'),
+                        ])
+                    >
+                    @error('cart_number') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                </div>
 
-            @if ($notFound)
-                <p class="text-sm text-discount">لم يتم العثور على طلب مطابق.</p>
-            @endif
+                @if ($notFound)
+                    <div class="rounded-lg border border-discount bg-discount-light p-3">
+                        <p class="text-sm font-medium text-discount">لم يتم العثور على طلب مطابق. تأكد من رقم الهاتف ورقم السلة.</p>
+                    </div>
+                @endif
 
-            <button
-                type="submit"
-                wire:loading.attr="disabled"
-                wire:target="track"
-                class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
-            >
-                <span wire:loading.remove wire:target="track">تتبع</span>
-                <span wire:loading wire:target="track">جارٍ التتبع...</span>
-            </button>
-        </form>
+                <button
+                    type="submit"
+                    wire:loading.attr="disabled"
+                    wire:target="track"
+                    class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <span wire:loading.remove wire:target="track">تتبع</span>
+                    <span wire:loading wire:target="track">جارٍ التتبع...</span>
+                </button>
+            </form>
+        </div>
     @endif
 </div>

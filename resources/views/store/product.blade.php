@@ -1,7 +1,45 @@
-<x-layouts.app :title="$product->name">
-    @php
-        $galleryImages = $product->images->isNotEmpty() ? $product->images : collect([(object) ['path' => $product->image_path]]);
-    @endphp
+<?php
+    $galleryImages = $product->images->isNotEmpty() ? $product->images : collect([(object) ['path' => $product->image_path]]);
+    $ogImageUrl = \Illuminate\Support\Facades\Storage::url($galleryImages->first()->path);
+    $ogImageUrl = str_starts_with($ogImageUrl, 'http') ? $ogImageUrl : url($ogImageUrl);
+    $seoDescription = $product->description
+        ? \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/', ' ', $product->description)), 155)
+        : "تسوقي {$product->name} من متجر {$vendor->store_name} على ميرا ستور، توصيل داخل تعز واليمن.";
+    $availabilitySchema = match ($product->stock_status) {
+        'out_of_stock' => 'https://schema.org/OutOfStock',
+        'pre_order' => 'https://schema.org/PreOrder',
+        default => 'https://schema.org/InStock',
+    };
+?>
+<x-layouts.app
+    title="{{ $product->name }} - شراء من {{ $vendor->store_name }} في تعز | ميرا ستور"
+    :description="$seoDescription"
+    :image="$ogImageUrl"
+    :imageAlt="$product->name.' - '.$vendor->store_name.' - تعز'"
+    ogType="product"
+>
+    <x-slot:seoHead>
+        <script type="application/ld+json">
+            {!! json_encode([
+                '@@context' => 'https://schema.org',
+                '@@type' => 'Product',
+                'name' => $product->name,
+                'description' => $seoDescription,
+                'image' => $ogImageUrl,
+                'brand' => [
+                    '@@type' => 'Brand',
+                    'name' => $vendor->store_name,
+                ],
+                'offers' => [
+                    '@@type' => 'Offer',
+                    'url' => url()->current(),
+                    'priceCurrency' => $product->currency->code,
+                    'price' => (string) $product->price,
+                    'availability' => $availabilitySchema,
+                ],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+        </script>
+    </x-slot:seoHead>
 
     <div class="mx-auto max-w-md pb-24 animate-fade-in-up">
         <div class="relative" x-data="{ active: 0, count: {{ $galleryImages->count() }} }">
@@ -12,7 +50,7 @@
             >
                 @foreach ($galleryImages as $galleryImage)
                     <div class="aspect-square w-full flex-shrink-0 snap-center overflow-hidden bg-surface">
-                        <img src="{{ \Illuminate\Support\Facades\Storage::url($galleryImage->path) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                        <img src="{{ \Illuminate\Support\Facades\Storage::url($galleryImage->path) }}" alt="{{ $product->name }} - {{ $vendor->store_name }} - تعز" class="h-full w-full object-cover">
                     </div>
                 @endforeach
             </div>
@@ -78,10 +116,14 @@
                 <span class="mt-2 inline-block rounded bg-discount-light px-2 py-0.5 text-xs text-discount">طلب مسبق</span>
             @elseif ($product->stock_status === 'out_of_stock')
                 <span class="mt-2 inline-block rounded bg-surface px-2 py-0.5 text-xs text-muted">نفدت الكمية</span>
+            @else
+                <span class="mt-2 inline-block rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">متوفر</span>
             @endif
 
             @if ($product->options)
-                <p class="mt-3 text-sm text-muted">{{ $product->options }}</p>
+                <div class="mt-3 text-sm text-muted">
+                    <span class="font-medium text-ink-soft">الخيارات: </span>{{ $product->options }}
+                </div>
             @endif
 
             <p class="mt-4 whitespace-pre-line text-justify text-sm text-muted">{{ $product->description }}</p>

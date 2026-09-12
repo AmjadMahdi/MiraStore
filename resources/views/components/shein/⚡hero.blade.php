@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Setting;
 use App\Models\SheinCart;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
@@ -10,11 +11,21 @@ new class extends Component
     #[Locked]
     public string $customerCountryCode = '+967';
 
-    #[Validate('required|string|max:15|regex:/^[0-9\s-]+$/')]
+    #[Validate('required|string|regex:/^7[0-9]{8}$/')]
     public string $customerPhone = '';
 
-    #[Validate('required|string|max:2000')]
+    public function updatedCustomerPhone(): void
+    {
+        $this->validateOnly('customerPhone');
+    }
+
+    #[Validate('required|string|max:2000|regex:/^[^\x{0600}-\x{06FF}]*$/u')]
     public string $link = '';
+
+    public function updatedLink(): void
+    {
+        $this->validateOnly('link');
+    }
 
     #[Validate('required|integer|min:1|max:99')]
     public string $quantity = '1';
@@ -67,6 +78,14 @@ new class extends Component
         return [
             'activeCart' => $cart,
             'adminWhatsappLink' => $cart ? 'https://wa.me/'.preg_replace('/\D/', '', $cart->customer_phone) : null,
+            'heroTitles' => Setting::getArray('hero_titles', [
+                'طلباتك من Shein لمدينة تعز.. أوفر وأسرع!',
+            ]),
+            'heroSubtitle' => Setting::get(
+                'hero_subtitle',
+                'خدمة طلب مجانية بالكامل. أدخلي رابط المنتج اللي عجبك، وخدمة العملاء بتتواصل معاكي مباشرة عشان تأكد طلبك.'
+            ),
+            'heroButtonText' => Setting::get('hero_button_text', '🔗 هاتي رابط المنتج هنا'),
         ];
     }
 };
@@ -160,11 +179,22 @@ new class extends Component
     </div>
 
     <div class="relative z-10 mx-auto max-w-2xl text-center animate-fade-in-up">
-        <h1 class="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl sm:leading-tight">
-            طلباتك من شي إن لمدينة تعز..<br>أوفر وأسرع!
-        </h1>
+        <div
+            x-data="{ titles: @js($heroTitles), active: 0 }"
+            x-init="titles.length > 1 && setInterval(() => active = (active + 1) % titles.length, 3000)"
+            class="grid"
+        >
+            <template x-for="(title, i) in titles" :key="i">
+                <h1
+                    :class="active === i ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'"
+                    x-text="title"
+                    dir="auto"
+                    class="col-start-1 row-start-1 text-4xl font-bold leading-snug tracking-tight text-white transition-all duration-700 ease-in-out sm:text-5xl sm:leading-snug"
+                ></h1>
+            </template>
+        </div>
         <p class="mt-3 text-base leading-loose text-white/70">
-            خدمة طلب مجانية بالكامل. أدخلي رابط المنتج اللي عجبك، وخدمة العملاء بتتواصل معاكي مباشرة عشان تأكد طلبك.
+            {{ $heroSubtitle }}
         </p>
 
         @if ($activeCart)
@@ -178,7 +208,7 @@ new class extends Component
                     x-on:click="open = true"
                     class="mx-auto flex items-center gap-2.5 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink shadow-xl transition hover:scale-[1.02] sm:py-5 sm:text-lg"
                 >
-                    🔗 هاتي رابط المنتج هنا
+                    {{ $heroButtonText }}
                 </button>
 
                 <div
@@ -206,10 +236,14 @@ new class extends Component
                             class="mt-4 space-y-4"
                             x-data="{
                                 confirming: false,
+                                copiedLink: false,
+                                copiedPhone: false,
                                 pLink: @js($link),
                                 pQuantity: @js($quantity),
                                 pSpecifications: @js($specifications),
                                 pPhone: @js($customerPhone),
+                                get phoneValid() { return /^7[0-9]{8}$/.test(this.pPhone); },
+                                get linkValid() { return this.pLink.length > 0 && !/[؀-ۿ]/.test(this.pLink); },
                             }"
                         >
                         @if ($justAdded)
@@ -270,7 +304,7 @@ new class extends Component
                                 <label class="block text-sm font-medium text-ink-soft">رابط المنتج</label>
                                 <input
                                     type="text"
-                                    wire:model="link"
+                                    wire:model.live="link"
                                     x-model="pLink"
                                     dir="ltr"
                                     placeholder="https://..."
@@ -324,7 +358,9 @@ new class extends Component
                                     </div>
                                     <input
                                         type="text"
-                                        wire:model="customerPhone"
+                                        inputmode="numeric"
+                                        maxlength="9"
+                                        wire:model.live="customerPhone"
                                         x-model="pPhone"
                                         placeholder="7xxxxxxxx"
                                         @class([
@@ -340,7 +376,8 @@ new class extends Component
                             <button
                                 type="button"
                                 x-on:click="confirming = true"
-                                class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover"
+                                x-bind:disabled="!phoneValid || !linkValid"
+                                class="w-full rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 إضافة إلى السلة
                             </button>
@@ -350,19 +387,50 @@ new class extends Component
                             <p class="text-sm font-semibold text-ink">تأكد من صحة المعلومات قبل الإضافة:</p>
 
                             <div class="space-y-2 rounded-lg bg-surface p-3 text-sm">
-                                <p class="text-ink-soft">الرابط: <span class="break-all font-medium text-ink" dir="ltr" x-text="pLink"></span></p>
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="min-w-0 text-ink-soft">الرابط: <span class="break-all font-medium text-ink" dir="ltr" x-text="pLink"></span></p>
+                                    <button
+                                        type="button"
+                                        x-on:click="navigator.clipboard.writeText(pLink); copiedLink = true; setTimeout(() => copiedLink = false, 1500)"
+                                        class="flex-shrink-0 text-muted hover:text-ink"
+                                        aria-label="نسخ الرابط"
+                                    >
+                                        <svg x-show="!copiedLink" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 4h8a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-8a2 2 0 012-2z" />
+                                        </svg>
+                                        <svg x-show="copiedLink" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                </div>
                                 <p class="text-ink-soft">الكمية: <span class="font-medium text-ink" x-text="pQuantity"></span></p>
                                 <p class="text-ink-soft" x-show="pSpecifications">المواصفات: <span class="font-medium text-ink" x-text="pSpecifications"></span></p>
-                                <p class="text-ink-soft">رقم واتساب: <span class="font-medium text-ink" dir="ltr" x-text="'+967 ' + pPhone"></span></p>
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="text-ink-soft">رقم واتساب: <span class="font-medium text-ink" dir="ltr" x-text="'+967 ' + pPhone"></span></p>
+                                    <button
+                                        type="button"
+                                        x-on:click="navigator.clipboard.writeText('+967 ' + pPhone); copiedPhone = true; setTimeout(() => copiedPhone = false, 1500)"
+                                        class="flex-shrink-0 text-muted hover:text-ink"
+                                        aria-label="نسخ رقم واتساب"
+                                    >
+                                        <svg x-show="!copiedPhone" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 4h8a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-8a2 2 0 012-2z" />
+                                        </svg>
+                                        <svg x-show="copiedPhone" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">
                                 <button
                                     type="button"
                                     x-on:click="$wire.addToCart().then(() => { confirming = false })"
+                                    x-bind:disabled="!phoneValid || !linkValid"
                                     wire:loading.attr="disabled"
                                     wire:target="addToCart"
-                                    class="flex-1 rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
+                                    class="flex-1 rounded-lg bg-primary py-3 text-base font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <span wire:loading.remove wire:target="addToCart">نعم، المعلومات صحيحة</span>
                                     <span wire:loading wire:target="addToCart">جارٍ الإضافة...</span>

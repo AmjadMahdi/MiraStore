@@ -190,6 +190,52 @@ class VendorProductTest extends TestCase
         $this->assertSame(1, $product->images()->count());
     }
 
+    public function test_out_of_stock_is_no_longer_a_selectable_option_for_a_normal_product(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $category = Category::factory()->create();
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => $category->id,
+            'name' => 'Item',
+            'description' => 'desc',
+            'price' => 10,
+            'image_path' => 'products/a.jpg',
+            'stock_status' => 'in_stock',
+        ]);
+
+        Livewire::actingAs($vendor)
+            ->test('vendor.product-form', ['product' => $product])
+            ->assertDontSeeHtml('نفدت الكمية');
+    }
+
+    public function test_out_of_stock_option_still_shows_and_can_be_saved_for_a_product_that_already_has_it(): void
+    {
+        $vendor = User::factory()->create(['role' => 'vendor']);
+        $category = Category::factory()->create();
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => $category->id,
+            'currency_id' => \App\Models\Currency::first()->id,
+            'name' => 'Old Sold Out Item',
+            'description' => 'desc',
+            'price' => 10,
+            'image_path' => 'products/a.jpg',
+            'stock_status' => 'out_of_stock',
+        ]);
+
+        Livewire::actingAs($vendor)
+            ->test('vendor.product-form', ['product' => $product])
+            ->assertSeeHtml('نفدت الكمية')
+            ->set('name', 'Renamed')
+            ->call('save');
+
+        $this->assertSame('Renamed', $product->fresh()->name);
+        $this->assertSame('out_of_stock', $product->fresh()->stock_status);
+    }
+
     public function test_vendor_can_delete_own_product(): void
     {
         $vendor = User::factory()->create(['role' => 'vendor']);

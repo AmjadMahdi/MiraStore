@@ -1,10 +1,66 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
     <head>
+        @php
+            // Private, gated, or per-visitor pages are excluded from indexing
+            // by default so search engines never crawl dashboards or a
+            // guest's own cart — this is centralized here (rather than on
+            // every individual view) precisely so no existing page template
+            // needs to be touched to get the correct behavior.
+            $seoNoindex = $noindex ?? (
+                request()->routeIs('admin.*')
+                || request()->routeIs('vendor.dashboard')
+                || request()->routeIs('vendor.products.*')
+                || request()->routeIs('vendor.analytics')
+                || request()->routeIs('vendor.status')
+                || request()->routeIs('login')
+                || request()->routeIs('shein.cart')
+                || request()->routeIs('shein.public-cart')
+            );
+
+            $seoTitle = $title ?? config('app.name');
+            $seoDescription = $description ?? 'ميرا ستور: وسيط طلبات شي إن في تعز، اليمن، ومنصة إلكترونية لتجّار تعز لعرض وبيع منتجاتهم مباشرة عبر واتساب.';
+            $seoCanonical = $canonical ?? url()->current();
+            $seoType = $ogType ?? 'website';
+        @endphp
+
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>{{ $title ?? config('app.name') }}</title>
+        <title>{{ $seoTitle }}</title>
+        <meta name="description" content="{{ $seoDescription }}">
+
+        @if ($seoNoindex)
+            <meta name="robots" content="noindex, nofollow">
+        @else
+            <meta name="robots" content="index, follow">
+        @endif
+
+        <link rel="canonical" href="{{ $seoCanonical }}">
+        <link rel="alternate" hreflang="ar-ye" href="{{ $seoCanonical }}">
+        <link rel="alternate" hreflang="x-default" href="{{ $seoCanonical }}">
+
+        {{-- Open Graph --}}
+        <meta property="og:type" content="{{ $seoType }}">
+        <meta property="og:site_name" content="{{ config('app.name') }}">
+        <meta property="og:locale" content="ar_YE">
+        <meta property="og:title" content="{{ $seoTitle }}">
+        <meta property="og:description" content="{{ $seoDescription }}">
+        <meta property="og:url" content="{{ $seoCanonical }}">
+        @isset($image)
+            <meta property="og:image" content="{{ $image }}">
+            <meta property="og:image:alt" content="{{ $imageAlt ?? $seoTitle }}">
+        @endisset
+
+        {{-- Twitter Card --}}
+        <meta name="twitter:card" content="{{ isset($image) ? 'summary_large_image' : 'summary' }}">
+        <meta name="twitter:title" content="{{ $seoTitle }}">
+        <meta name="twitter:description" content="{{ $seoDescription }}">
+        @isset($image)
+            <meta name="twitter:image" content="{{ $image }}">
+        @endisset
+
+        {{ $seoHead ?? '' }}
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +90,10 @@
                 </div>
 
                 <div class="flex items-center gap-3 text-sm sm:gap-4">
+                    @if (request()->routeIs('home'))
+                        <livewire:shein.order-status />
+                    @endif
+
                     @auth
                         <a href="{{ auth()->user()->isStaff() ? route('admin.dashboard') : route('vendor.dashboard') }}" class="text-muted hover:text-primary">
                             {{ __('لوحة التحكم') }}
@@ -84,7 +144,7 @@
                                 'admin.products.index' => __('المنتجات'),
                                 'admin.categories.index' => __('الفئات'),
                                 'admin.vendors.index' => __('التجّار'),
-                                'admin.carts.index' => __('سلال شي إن'),
+                                'admin.carts.index' => __('سلال Shein'),
                                 'admin.activity.index' => __('سجل النشاط'),
                                 'admin.settings.index' => __('الإعدادات'),
                             ];

@@ -12,7 +12,20 @@ class SheinCart extends Model
 {
     use HasFactory;
 
-    public const STATUSES = ['open', 'ordered', 'in_transit', 'arrived'];
+    /**
+     * The cart pipeline is admin-managed (see SheinCartStatus) rather than a
+     * fixed list — these read the current, ordered set of statuses.
+     */
+    public static function statuses(): array
+    {
+        return SheinCartStatus::orderBy('display_order')->pluck('key')->all();
+    }
+
+    /** @return array<string, string> */
+    public static function statusLabels(): array
+    {
+        return SheinCartStatus::orderBy('display_order')->pluck('label', 'key')->all();
+    }
 
     protected $fillable = [
         'cart_number',
@@ -88,16 +101,37 @@ class SheinCart extends Model
             if (! $cart->cart_number) {
                 $cart->cart_number = static::generateCartNumber();
             }
+
+            // The DB column still carries a plain 'open' default as a
+            // last-resort safety net, but the real source of truth for
+            // which statuses exist is the admin-managed SheinCartStatus
+            // table — so a fresh cart should get whichever status is
+            // currently first in that list, not a value that could have
+            // since been renamed or removed.
+            if (! $cart->status) {
+                $cart->status = static::statuses()[0] ?? 'open';
+            }
         });
     }
 
+    public const CART_NUMBER_START = 10;
+
+    /**
+     * Sequential, e.g. mira-10, mira-11, mira-12... — picks up from the
+     * highest existing "mira-N" number rather than a counter column, so it
+     * stays correct even if old MIRA-XXXXX carts are mixed in.
+     */
     public static function generateCartNumber(): string
     {
-        do {
-            $number = 'MIRA-'.random_int(10000, 99999);
-        } while (static::where('cart_number', $number)->exists());
+        $maxNumber = static::query()
+            ->where('cart_number', 'like', 'mira-%')
+            ->pluck('cart_number')
+            ->map(fn (string $number) => (int) Str::after($number, 'mira-'))
+            ->max();
 
-        return $number;
+        $next = $maxNumber !== null ? $maxNumber + 1 : static::CART_NUMBER_START;
+
+        return 'mira-'.max($next, static::CART_NUMBER_START);
     }
 
     /**

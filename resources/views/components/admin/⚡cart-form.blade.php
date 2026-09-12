@@ -7,7 +7,7 @@ use Livewire\Component;
 new class extends Component
 {
     #[Validate('required|string|max:255')]
-    public string $cart_name = 'طلبي من شي إن';
+    public string $cart_name = 'طلبي من Shein';
 
     #[Validate('nullable|string|max:2000')]
     public string $description = '';

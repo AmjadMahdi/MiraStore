@@ -7,7 +7,7 @@ use Livewire\Component;
 new class extends Component
 {
     #[Validate('required|string|max:255')]
-    public string $cart_name = 'طلبي من شي إن';
+    public string $cart_name = 'طلبي من Shein';
 
     #[Validate('required|string|max:2000')]
     public string $cart_details = '';
@@ -52,7 +52,7 @@ new class extends Component
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-ink-soft">كود سلة شي إن أو الروابط</label>
+                <label class="block text-sm font-medium text-ink-soft">كود سلة Shein أو الروابط</label>
                 <textarea wire:model="cart_details" rows="4" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"></textarea>
                 @error('cart_details') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>

@@ -19,7 +19,7 @@
             </a>
             <a href="{{ route('admin.carts.index') }}" class="rounded-lg border border-line-medium p-4 text-center">
                 <p class="text-2xl font-semibold text-primary">{{ $openCartCount }}</p>
-                <p class="text-xs text-muted">سلال شي إن المفتوحة</p>
+                <p class="text-xs text-muted">سلال Shein المفتوحة</p>
             </a>
         </div>
     </div>

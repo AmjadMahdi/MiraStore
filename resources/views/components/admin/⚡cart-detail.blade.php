@@ -18,6 +18,8 @@ new class extends Component
 
     public string $itemDate = '';
 
+    public string $itemCustomerPhone = '';
+
     public ?int $editingItemId = null;
 
     public bool $editingCartDetails = false;
@@ -31,6 +33,8 @@ new class extends Component
     public string $editCustomerCountryCode = '+967';
 
     public string $editCustomerPhone = '';
+
+    public bool $confirmingActivation = false;
 
     public function mount(SheinCart $cart): void
     {
@@ -47,6 +51,7 @@ new class extends Component
             'itemQuantity' => ['required', 'integer', 'min:1'],
             'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
+            'itemCustomerPhone' => ['nullable', 'string', 'max:20'],
         ]);
 
         $this->cart->items()->create([
@@ -54,12 +59,14 @@ new class extends Component
             'quantity' => (int) $this->itemQuantity,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
+            'customer_phone' => $this->itemCustomerPhone !== '' ? $this->itemCustomerPhone : null,
         ]);
 
         $this->itemName = '';
         $this->itemQuantity = '1';
         $this->itemLink = '';
         $this->itemDate = now()->format('Y-m-d\TH:i');
+        $this->itemCustomerPhone = '';
         $this->itemJustAdded = true;
     }
 
@@ -73,6 +80,7 @@ new class extends Component
         $this->itemQuantity = (string) $item->quantity;
         $this->itemLink = (string) $item->link;
         $this->itemDate = $item->item_date->format('Y-m-d\TH:i');
+        $this->itemCustomerPhone = (string) $item->customer_phone;
     }
 
     public function cancelEditItem(): void
@@ -82,6 +90,7 @@ new class extends Component
         $this->itemQuantity = '1';
         $this->itemLink = '';
         $this->itemDate = now()->format('Y-m-d\TH:i');
+        $this->itemCustomerPhone = '';
     }
 
     public function updateItem(): void
@@ -96,6 +105,7 @@ new class extends Component
             'itemQuantity' => ['required', 'integer', 'min:1'],
             'itemLink' => ['required', 'string', 'max:2000'],
             'itemDate' => ['required', 'date'],
+            'itemCustomerPhone' => ['nullable', 'string', 'max:20'],
         ]);
 
         $item->update([
@@ -103,6 +113,7 @@ new class extends Component
             'quantity' => (int) $this->itemQuantity,
             'link' => $this->itemLink !== '' ? $this->itemLink : null,
             'item_date' => $this->itemDate,
+            'customer_phone' => $this->itemCustomerPhone !== '' ? $this->itemCustomerPhone : null,
         ]);
 
         $this->cancelEditItem();
@@ -184,16 +195,49 @@ new class extends Component
     {
         if ($this->cart->accepts_submissions) {
             $this->cart->disableSubmissions();
-        } else {
-            $this->cart->enableSubmissions();
+            $this->cart->refresh();
+
+            return;
         }
 
+        $otherActiveCart = $this->otherActiveCart();
+
+        if (! $otherActiveCart) {
+            $this->cart->enableSubmissions();
+            $this->cart->refresh();
+
+            return;
+        }
+
+        // Switching the active cart while another one is already live is
+        // consequential enough (it silently stops link submissions on the
+        // old cart) that it needs an explicit confirmation rather than
+        // happening automatically on a single click.
+        $this->confirmingActivation = true;
+    }
+
+    public function cancelActivationConfirm(): void
+    {
+        $this->confirmingActivation = false;
+    }
+
+    public function confirmActivation(): void
+    {
+        $this->cart->enableSubmissions();
         $this->cart->refresh();
+        $this->cancelActivationConfirm();
+    }
+
+    protected function otherActiveCart(): ?SheinCart
+    {
+        return SheinCart::where('accepts_submissions', true)
+            ->where('id', '!=', $this->cart->id)
+            ->first();
     }
 
     public function updateStatus(string $status): void
     {
-        abort_unless(in_array($status, SheinCart::STATUSES, true), 422);
+        abort_unless(in_array($status, SheinCart::statuses(), true), 422);
 
         $this->cart->update(['status' => $status]);
     }
@@ -203,6 +247,7 @@ new class extends Component
         return [
             'whatsappLink' => 'https://wa.me/'.preg_replace('/\D/', '', $this->cart->customer_phone),
             'items' => $this->cart->items()->orderByDesc('item_date')->get(),
+            'otherActiveCart' => $this->otherActiveCart(),
         ];
     }
 };
@@ -210,7 +255,7 @@ new class extends Component
 
 <div class="mx-auto max-w-2xl p-6 sm:p-8">
     @php
-        $statusLabels = ['open' => 'مفتوحة', 'ordered' => 'تم الطلب', 'in_transit' => 'في الطريق', 'arrived' => 'تم الوصول'];
+        $statusLabels = \App\Models\SheinCart::statusLabels();
     @endphp
 
     <div class="flex items-center justify-between gap-3">
@@ -340,7 +385,7 @@ new class extends Component
             wire:change="updateStatus($event.target.value)"
             class="rounded-lg border border-line-medium px-3 py-1.5 text-sm focus:border-black focus:ring-1 focus:ring-black"
         >
-            @foreach (\App\Models\SheinCart::STATUSES as $status)
+            @foreach (\App\Models\SheinCart::statuses() as $status)
                 <option value="{{ $status }}" @selected($cart->status === $status)>{{ $statusLabels[$status] }}</option>
             @endforeach
         </select>
@@ -362,7 +407,7 @@ new class extends Component
             wire:click="togglePublicLink"
             class="rounded-lg border border-line-medium px-3 py-1.5 text-sm font-medium text-ink-soft"
         >
-            {{ $cart->public_token ? 'إلغاء الرابط العام' : 'إنشاء رابط عام' }}
+            {{ $cart->public_token ? 'إخفاء من السلة' : 'إظهار في السلة' }}
         </button>
 
         <button
@@ -379,7 +424,39 @@ new class extends Component
     </div>
 
     @if ($cart->accepts_submissions)
-        <p class="mt-2 text-xs text-muted">هذه السلة الوحيدة التي تستقبل روابط الزوار حالياً — تفعيل سلة أخرى يوقف الاستقبال هنا تلقائياً.</p>
+        <p class="mt-2 text-xs text-muted">هذه السلة الوحيدة التي تستقبل روابط الزوار حالياً — تفعيل سلة أخرى سيطلب تأكيداً منك أولاً لإيقاف الاستقبال هنا.</p>
+    @endif
+
+    @if ($confirmingActivation)
+        <div
+            x-data
+            x-on:keydown.escape.window="$wire.cancelActivationConfirm()"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
+            <div class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+                <p class="text-base font-medium text-ink">هل أنت متأكد من إيقاف استقبال الروابط في سلة "{{ $otherActiveCart->cart_name }}"؟</p>
+                <p class="mt-1 text-sm text-muted">
+                    سيتم إيقاف الاستقبال في سلة "{{ $otherActiveCart->cart_name }}" وتفعيله في سلة "{{ $cart->cart_name }}".
+                </p>
+
+                <div class="mt-4 flex gap-2">
+                    <button
+                        type="button"
+                        wire:click="confirmActivation"
+                        class="flex-1 rounded-lg bg-primary py-2 text-sm font-semibold text-white transition hover:bg-primary-hover"
+                    >
+                        تأكيد التفعيل
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="cancelActivationConfirm"
+                        class="flex-1 rounded-lg border border-line-medium py-2 text-sm font-semibold text-ink"
+                    >
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
     @endif
 
     @if ($cart->public_token)
@@ -463,6 +540,11 @@ new class extends Component
                                 <input type="datetime-local" wire:model="itemDate" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
                                 @error('itemDate') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-ink-soft">رقم واتساب العميل (اختياري)</label>
+                                <input type="text" wire:model="itemCustomerPhone" dir="ltr" placeholder="+967 7xxxxxxxx" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2 text-sm focus:border-black focus:ring-1 focus:ring-black">
+                                @error('itemCustomerPhone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                            </div>
                             <div class="flex gap-2">
                                 <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover">حفظ</button>
                                 <button type="button" wire:click="cancelEditItem" class="rounded-lg border border-line-medium px-3 py-1.5 text-xs font-medium text-ink">إلغاء</button>
@@ -505,6 +587,16 @@ new class extends Component
                                         </div>
                                     @endif
                                     <p class="text-xs text-disabled">{{ $item->item_date->format('Y-m-d H:i') }}</p>
+                                    @if ($item->customer_phone)
+                                        <a
+                                            href="https://wa.me/{{ preg_replace('/\D/', '', $item->customer_phone) }}"
+                                            target="_blank"
+                                            class="text-xs text-primary underline"
+                                            dir="ltr"
+                                        >
+                                            {{ $item->customer_phone }}
+                                        </a>
+                                    @endif
                                 </div>
                             </div>
 
@@ -699,6 +791,12 @@ new class extends Component
                             <label class="block text-sm font-medium text-ink-soft">التاريخ والوقت</label>
                             <input type="datetime-local" wire:model="itemDate" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
                             @error('itemDate') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-ink-soft">رقم واتساب العميل (اختياري)</label>
+                            <input type="text" wire:model="itemCustomerPhone" dir="ltr" placeholder="+967 7xxxxxxxx" class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black">
+                            @error('itemCustomerPhone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                         </div>
 
                         <button

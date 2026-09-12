@@ -14,6 +14,11 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'display_order',
+    ];
+
+    protected $attributes = [
+        'display_order' => 0,
     ];
 
     public function getSlugOptions(): SlugOptions

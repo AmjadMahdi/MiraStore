@@ -35,7 +35,7 @@ export function mountNebulaShader(container) {
     `;
 
     const fragmentShader = `
-        precision mediump float;
+        precision highp float;
         uniform vec2 iResolution;
         uniform float iTime;
         varying vec2 vUv;
