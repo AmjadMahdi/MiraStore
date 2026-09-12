@@ -10,10 +10,10 @@ new class extends Component
     #[Validate('required|string|regex:/^[0-9]{7,9}$/')]
     public string $customer_phone = '';
 
-    #[Validate('required|string|max:20')]
-    public string $cart_number = '';
-
     public ?SheinCart $cart = null;
+
+    /** @var \Illuminate\Support\Collection<int, SheinCart>|null */
+    public $matches = null;
 
     public bool $notFound = false;
 
@@ -24,7 +24,7 @@ new class extends Component
         $key = 'shein-order-status:'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError('cart_number', 'محاولات كثيرة جداً. يرجى المحاولة مرة أخرى بعد دقيقة.');
+            $this->addError('customer_phone', 'محاولات كثيرة جداً. يرجى المحاولة مرة أخرى بعد دقيقة.');
 
             return;
         }
@@ -37,25 +37,43 @@ new class extends Component
         // only rather than the exact string.
         $normalizedInput = '967'.$this->customer_phone;
 
-        $cart = SheinCart::where('cart_number', $this->cart_number)->with('items')->first();
-
         // A visitor who added a link via the homepage "Add Link" flow into
         // a shared open cart recorded their own phone on that item, not on
         // the cart itself (the cart's phone belongs to whoever the cart was
-        // created for) — so a match on either one counts.
-        $matches = $cart && (
-            preg_replace('/\D/', '', $cart->customer_phone) === $normalizedInput
+        // created for) — so a match on either one counts. There's no
+        // cart_number to filter by, so every cart is checked.
+        $matches = SheinCart::with('items')->get()->filter(fn (SheinCart $cart) => preg_replace('/\D/', '', $cart->customer_phone) === $normalizedInput
             || $cart->items->contains(fn ($item) => $item->customer_phone && preg_replace('/\D/', '', $item->customer_phone) === $normalizedInput)
-        );
+        )->sortByDesc('updated_at')->values();
 
-        $this->cart = $matches ? $cart : null;
+        if ($matches->isEmpty()) {
+            $this->notFound = true;
 
-        $this->notFound = $this->cart === null;
+            return;
+        }
+
+        if ($matches->count() === 1) {
+            $this->cart = $matches->first();
+
+            return;
+        }
+
+        $this->matches = $matches;
+    }
+
+    public function selectCart(int $cartId): void
+    {
+        // Only allow picking a cart that this phone number's own search
+        // just matched — not an arbitrary id someone might pass in.
+        abort_unless($this->matches && $this->matches->contains('id', $cartId), 403);
+
+        $this->cart = SheinCart::with('items')->find($cartId);
+        $this->matches = null;
     }
 
     public function reset_(): void
     {
-        $this->reset(['cart', 'notFound', 'customer_phone', 'cart_number']);
+        $this->reset(['cart', 'matches', 'notFound', 'customer_phone']);
     }
 };
 ?>
@@ -91,8 +109,10 @@ new class extends Component
                     <p class="mt-0.5 text-xs text-muted">
                         @if ($cart)
                             آخر تحديث {{ $cart->updated_at->diffForHumans() }}
+                        @elseif ($matches)
+                            اختر الطلب الذي تريد تتبعه
                         @else
-                            أدخل رقم هاتفك ورقم السلة لعرض حالة طلبك
+                            أدخل رقم هاتفك لعرض حالة طلبك
                         @endif
                     </p>
                 </div>
@@ -168,6 +188,44 @@ new class extends Component
                         تتبع سلة أخرى
                     </button>
                 </div>
+            @elseif ($matches)
+                <div class="mt-5 space-y-2">
+                    @foreach ($matches as $match)
+                        @php
+                            $matchStatus = \App\Models\SheinCartStatus::where('key', $match->status)->first();
+                        @endphp
+                        <button
+                            type="button"
+                            wire:click="selectCart({{ $match->id }})"
+                            class="flex w-full items-center justify-between gap-3 rounded-lg border border-line-medium p-3 text-start transition hover:bg-surface"
+                        >
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-semibold text-ink">{{ $match->cart_name }}</p>
+                                <div @class([
+                                    'mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
+                                    $matchStatus?->pillClasses() ?? 'bg-surface text-muted',
+                                ])>
+                                    <span @class(['h-1 w-1 flex-shrink-0 rounded-full', $matchStatus?->dotClasses() ?? 'bg-disabled'])></span>
+                                    {{ $matchStatus?->label ?? $match->status }}
+                                </div>
+                            </div>
+                            <span class="flex-shrink-0 rounded-md bg-surface px-2 py-1 font-mono text-xs font-medium text-muted" dir="ltr">
+                                {{ $match->cart_number }}
+                            </span>
+                        </button>
+                    @endforeach
+
+                    <button
+                        type="button"
+                        wire:click="reset_"
+                        class="flex w-full items-center justify-center gap-1.5 py-1 text-sm font-medium text-muted transition hover:text-ink"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-6.36M20 15a9 9 0 01-14.13 6.36" />
+                        </svg>
+                        تتبع برقم آخر
+                    </button>
+                </div>
             @else
                 <form wire:submit="track" class="mt-5 space-y-4">
                     <div>
@@ -193,25 +251,9 @@ new class extends Component
                         @error('customer_phone') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-ink-soft">رقم السلة</label>
-                        <input
-                            type="text"
-                            wire:model="cart_number"
-                            placeholder="mira-10"
-                            dir="ltr"
-                            @class([
-                                'mt-1.5 w-full rounded-lg border px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black',
-                                'border-discount' => $errors->has('cart_number'),
-                                'border-line-medium' => ! $errors->has('cart_number'),
-                            ])
-                        >
-                        @error('cart_number') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
-                    </div>
-
                     @if ($notFound)
                         <div class="rounded-lg border border-discount bg-discount-light p-3">
-                            <p class="text-sm font-medium text-discount">لم يتم العثور على طلب مطابق. تأكد من رقم الهاتف ورقم السلة.</p>
+                            <p class="text-sm font-medium text-discount">لم يتم العثور على طلب مرتبط بهذا الرقم.</p>
                         </div>
                     @endif
 

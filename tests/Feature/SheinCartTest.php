@@ -29,7 +29,7 @@ class SheinCartTest extends TestCase
         ]);
     }
 
-    public function test_customer_can_track_their_cart_with_matching_phone_and_number(): void
+    public function test_customer_can_track_their_cart_with_just_their_phone_number(): void
     {
         $cart = SheinCart::create([
             'cart_name' => 'Winter Gear',
@@ -40,7 +40,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.track-cart')
             ->set('customer_phone', '771111111')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', false)
             ->assertSet('cart.id', $cart->id);
@@ -56,7 +55,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.track-cart')
             ->set('customer_phone', '79950249')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertHasNoErrors()
             ->assertSet('notFound', false)
@@ -78,15 +76,46 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.track-cart')
             ->set('customer_phone', '775835076')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', false)
             ->assertSet('cart.id', $cart->id);
     }
 
+    public function test_tracking_shows_a_picker_when_the_phone_matches_multiple_carts(): void
+    {
+        $first = SheinCart::create(['cart_name' => 'Order One', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+        $second = SheinCart::create(['cart_name' => 'Order Two', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+
+        $component = Livewire::test('shein.track-cart')
+            ->set('customer_phone', '771111111')
+            ->call('track')
+            ->assertSet('cart', null)
+            ->assertSet('notFound', false);
+
+        $matches = $component->get('matches');
+        $this->assertCount(2, $matches);
+
+        $component->call('selectCart', $second->id)
+            ->assertSet('cart.id', $second->id)
+            ->assertSet('matches', null);
+    }
+
+    public function test_cannot_select_a_cart_that_was_not_in_the_matched_results(): void
+    {
+        $first = SheinCart::create(['cart_name' => 'Order One', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+        SheinCart::create(['cart_name' => 'Order Two', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+        $unrelated = SheinCart::create(['cart_name' => 'Someone Else', 'customer_phone' => '+967799999999', 'cart_details' => 'link']);
+
+        $component = Livewire::test('shein.track-cart')
+            ->set('customer_phone', '771111111')
+            ->call('track');
+
+        $component->call('selectCart', $unrelated->id)->assertStatus(403);
+    }
+
     public function test_tracking_fails_with_mismatched_phone(): void
     {
-        $cart = SheinCart::create([
+        SheinCart::create([
             'cart_name' => 'Winter Gear',
             'customer_phone' => '+967 771111111',
             'cart_details' => 'link',
@@ -94,7 +123,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.track-cart')
             ->set('customer_phone', '799999999')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', true);
     }
@@ -104,14 +132,13 @@ class SheinCartTest extends TestCase
         RateLimiter::clear('shein-tracking:127.0.0.1');
 
         $component = Livewire::test('shein.track-cart')
-            ->set('customer_phone', '770000000')
-            ->set('cart_number', 'mira-00000');
+            ->set('customer_phone', '770000000');
 
         for ($i = 0; $i < 5; $i++) {
             $component->call('track')->assertSet('notFound', true);
         }
 
-        $component->call('track')->assertHasErrors('cart_number');
+        $component->call('track')->assertHasErrors('customer_phone');
     }
 
     public function test_admin_can_update_cart_status(): void
@@ -719,7 +746,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.order-status')
             ->set('customer_phone', '771111111')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', false)
             ->assertSet('cart.id', $cart->id)
@@ -738,7 +764,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.order-status')
             ->set('customer_phone', '771111111')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', false)
             ->assertSee('تم استلام الطلبات')
@@ -760,7 +785,6 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.order-status')
             ->set('customer_phone', '775835076')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('notFound', false)
             ->assertSet('cart.id', $cart->id);
@@ -770,7 +794,6 @@ class SheinCartTest extends TestCase
     {
         Livewire::test('shein.order-status')
             ->set('customer_phone', '799999999')
-            ->set('cart_number', 'mira-00000')
             ->call('track')
             ->assertSet('notFound', true);
     }
@@ -785,12 +808,26 @@ class SheinCartTest extends TestCase
 
         Livewire::test('shein.order-status')
             ->set('customer_phone', '771111111')
-            ->set('cart_number', $cart->cart_number)
             ->call('track')
             ->assertSet('cart.id', $cart->id)
             ->call('reset_')
             ->assertSet('cart', null)
-            ->assertSet('customer_phone', '')
-            ->assertSet('cart_number', '');
+            ->assertSet('customer_phone', '');
+    }
+
+    public function test_order_status_badge_shows_a_picker_when_the_phone_matches_multiple_carts(): void
+    {
+        SheinCart::create(['cart_name' => 'Order One', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+        $second = SheinCart::create(['cart_name' => 'Order Two', 'customer_phone' => '+967771111111', 'cart_details' => 'link']);
+
+        Livewire::test('shein.order-status')
+            ->set('customer_phone', '771111111')
+            ->call('track')
+            ->assertSet('cart', null)
+            ->assertSee('Order One')
+            ->assertSee('Order Two')
+            ->call('selectCart', $second->id)
+            ->assertSet('cart.id', $second->id)
+            ->assertSet('matches', null);
     }
 }
