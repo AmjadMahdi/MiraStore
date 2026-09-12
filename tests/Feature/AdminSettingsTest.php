@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -120,5 +122,74 @@ class AdminSettingsTest extends TestCase
         $this->assertStringContainsString(str_replace('\\', '\\\\', trim(json_encode('عنوان مخصص ثاني'), '"')), $html);
         $this->assertStringContainsString('نص فرعي مخصص', $html);
         $this->assertStringContainsString('زر مخصص', $html);
+    }
+
+    public function test_admin_can_upload_multiple_hero_background_images(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->set('newHeroBackgroundImages', [
+                UploadedFile::fake()->image('one.jpg', 1920, 1080),
+                UploadedFile::fake()->image('two.jpg', 1920, 1080),
+            ])
+            ->call('uploadHeroBackgroundImages')
+            ->assertHasNoErrors()
+            ->assertCount('hero_background_images', 2);
+
+        $stored = Setting::getArray('hero_background_images');
+        $this->assertCount(2, $stored);
+
+        foreach ($stored as $path) {
+            Storage::disk('public')->assertExists($path);
+        }
+    }
+
+    public function test_admin_can_remove_a_hero_background_image(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('hero/existing.jpg', 'fake-image-content');
+        Setting::setArray('hero_background_images', ['hero/existing.jpg']);
+
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->call('removeHeroBackgroundImage', 0)
+            ->assertCount('hero_background_images', 0);
+
+        $this->assertSame([], Setting::getArray('hero_background_images'));
+        Storage::disk('public')->assertMissing('hero/existing.jpg');
+    }
+
+    public function test_hero_shows_uploaded_background_images_instead_of_the_default_effect(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('hero/bg.jpg', 'fake-image-content');
+        Setting::setArray('hero_background_images', ['hero/bg.jpg']);
+
+        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        $html = Livewire::test('shein.hero')->html();
+
+        // The image URL is passed to Alpine via @js(), which JSON-encodes
+        // and escapes it for safe attribute embedding — so just check the
+        // filename made it into the payload rather than matching the exact
+        // escaped string.
+        $this->assertStringContainsString('bg.jpg', $html);
+        $this->assertStringNotContainsString('mountNebulaShader', $html);
+    }
+
+    public function test_hero_uses_the_default_effect_when_no_background_images_are_set(): void
+    {
+        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart->enableSubmissions();
+
+        $html = Livewire::test('shein.hero')->html();
+
+        $this->assertStringContainsString('mountNebulaShader', $html);
     }
 }

@@ -323,9 +323,28 @@ new class extends Component
                         <span class="ms-1 rounded bg-discount-light px-1.5 py-0.5 text-xs font-medium text-discount">مقفلة</span>
                     @endif
                 </h1>
-                <p class="mt-1 text-sm text-muted">
+                <p class="mt-1 flex items-center gap-1.5 text-sm text-muted">
                     {{ $cart->cart_number }} &middot;
                     <a href="{{ $whatsappLink }}" target="_blank" class="text-primary underline" dir="ltr">{{ $cart->customer_phone }}</a>
+                    <span x-data="{ copied: false }" class="inline-flex">
+                        <button
+                            type="button"
+                            x-on:click="
+                                navigator.clipboard.writeText(@js($cart->customer_phone));
+                                copied = true;
+                                setTimeout(() => copied = false, 1500);
+                            "
+                            class="flex-shrink-0 text-muted hover:text-ink"
+                            aria-label="نسخ رقم واتساب"
+                        >
+                            <svg x-show="!copied" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 4h8a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-8a2 2 0 012-2z" />
+                            </svg>
+                            <svg x-show="copied" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </span>
                 </p>
                 <p class="mt-1 text-xs text-disabled">تاريخ الإنشاء: {{ $cart->created_at->format('Y-m-d H:i') }}</p>
                 @if ($cart->description)

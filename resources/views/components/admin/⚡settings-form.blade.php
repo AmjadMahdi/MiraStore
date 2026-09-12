@@ -1,11 +1,16 @@
 <?php
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component
 {
+    use WithFileUploads;
+
     #[Validate('nullable|url|max:255')]
     public string $support_whatsapp_link = '';
 
@@ -17,6 +22,12 @@ new class extends Component
 
     #[Validate('required|string|max:100')]
     public string $hero_button_text = '';
+
+    /** @var array<int, string> */
+    public array $hero_background_images = [];
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $newHeroBackgroundImages = [];
 
     public bool $justSaved = false;
 
@@ -34,6 +45,8 @@ new class extends Component
         );
 
         $this->hero_button_text = Setting::get('hero_button_text', '🔗 هاتي رابط المنتج هنا');
+
+        $this->hero_background_images = Setting::getArray('hero_background_images', []);
     }
 
     public function addTitle(): void
@@ -45,6 +58,44 @@ new class extends Component
     {
         unset($this->hero_titles[$index]);
         $this->hero_titles = array_values($this->hero_titles);
+    }
+
+    public function uploadHeroBackgroundImages(): void
+    {
+        $this->validate([
+            'newHeroBackgroundImages' => ['required', 'array', 'min:1'],
+            'newHeroBackgroundImages.*' => ['image', 'max:8192'],
+        ]);
+
+        foreach ($this->newHeroBackgroundImages as $upload) {
+            $image = ImageManager::gd()->read($upload->getRealPath())->cover(1920, 1080);
+
+            $path = 'hero/'.uniqid().'.jpg';
+
+            Storage::disk('public')->put($path, (string) $image->toJpeg(85));
+
+            $this->hero_background_images[] = $path;
+        }
+
+        Setting::setArray('hero_background_images', $this->hero_background_images);
+
+        $this->newHeroBackgroundImages = [];
+    }
+
+    public function removeHeroBackgroundImage(int $index): void
+    {
+        $path = $this->hero_background_images[$index] ?? null;
+
+        if ($path === null) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
+
+        unset($this->hero_background_images[$index]);
+        $this->hero_background_images = array_values($this->hero_background_images);
+
+        Setting::setArray('hero_background_images', $this->hero_background_images);
     }
 
     protected function rules(): array
@@ -130,6 +181,58 @@ new class extends Component
                 >
                     + إضافة عنوان آخر
                 </button>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-ink-soft">صور الخلفية</label>
+                <p class="mt-0.5 text-xs text-muted">
+                    ارفع صورة أو أكثر لتظهر كخلفية متغيرة بدل التأثير المتحرك الافتراضي — عند رفع أكثر من صورة، تتبدل الخلفية بينها تلقائياً. اترك القائمة فارغة لاستخدام التأثير الافتراضي.
+                </p>
+
+                @if (count($hero_background_images) > 0)
+                    <div class="mt-2 grid grid-cols-3 gap-2">
+                        @foreach ($hero_background_images as $index => $path)
+                            <div class="group relative aspect-video overflow-hidden rounded-lg border border-line-medium">
+                                <img src="{{ Storage::url($path) }}" class="h-full w-full object-cover">
+                                <button
+                                    type="button"
+                                    wire:click="removeHeroBackgroundImage({{ $index }})"
+                                    wire:confirm="حذف هذه الصورة من خلفية الواجهة الرئيسية؟"
+                                    class="absolute end-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-discount"
+                                    aria-label="حذف الصورة"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div class="mt-2 flex items-start gap-2">
+                    <div class="flex-1">
+                        <input
+                            type="file"
+                            wire:model="newHeroBackgroundImages"
+                            multiple
+                            accept="image/*"
+                            class="block w-full text-sm text-ink-soft"
+                        >
+                        @error('newHeroBackgroundImages') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                        @error('newHeroBackgroundImages.*') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="uploadHeroBackgroundImages"
+                        wire:loading.attr="disabled"
+                        wire:target="uploadHeroBackgroundImages,newHeroBackgroundImages"
+                        class="flex-shrink-0 rounded-lg border border-line-medium px-3 py-2 text-xs font-medium text-ink-soft disabled:opacity-60"
+                    >
+                        <span wire:loading.remove wire:target="uploadHeroBackgroundImages">رفع</span>
+                        <span wire:loading wire:target="uploadHeroBackgroundImages">جارٍ الرفع...</span>
+                    </button>
+                </div>
             </div>
 
             <div class="mt-4">

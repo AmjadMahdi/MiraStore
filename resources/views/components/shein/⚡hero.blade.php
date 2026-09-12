@@ -2,6 +2,7 @@
 
 use App\Models\Setting;
 use App\Models\SheinCart;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -86,21 +87,58 @@ new class extends Component
                 'خدمة طلب مجانية بالكامل. أدخلي رابط المنتج اللي عجبك، وخدمة العملاء بتتواصل معاكي مباشرة عشان تأكد طلبك.'
             ),
             'heroButtonText' => Setting::get('hero_button_text', '🔗 هاتي رابط المنتج هنا'),
+            'heroBackgroundImages' => array_map(
+                fn (string $path) => Storage::url($path),
+                Setting::getArray('hero_background_images', [])
+            ),
         ];
     }
 };
 ?>
 
 <div class="relative flex min-h-[70vh] items-center overflow-hidden bg-primary px-4 py-12">
-    {{-- WebGL nebula background; wire:ignore so Livewire re-renders (typing/submitting below) never tear down the canvas --}}
+    @if (count($heroBackgroundImages) > 0)
+        {{-- Admin-uploaded background image(s), cross-fading if there's more than one --}}
+        <div
+            x-data="{ images: @js($heroBackgroundImages), active: 0 }"
+            x-init="images.length > 1 && setInterval(() => active = (active + 1) % images.length, 6000)"
+            class="absolute inset-0 z-0"
+            aria-hidden="true"
+        >
+            <template x-for="(image, i) in images" :key="i">
+                <div
+                    :style="`background-image:url('${image}')`"
+                    class="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
+                    :class="active === i ? 'opacity-100' : 'opacity-0'"
+                ></div>
+            </template>
+            <div class="absolute inset-0 bg-black/50"></div>
+        </div>
+    @else
+        {{-- WebGL nebula background; wire:ignore so Livewire re-renders (typing/submitting below) never tear down the canvas --}}
+        <div
+            wire:ignore
+            class="absolute inset-0 z-0"
+            aria-hidden="true"
+            x-data
+            x-init="
+                const cleanup = window.mountNebulaShader($el);
+                document.addEventListener('livewire:navigating', cleanup, { once: true });
+            "
+        ></div>
+    @endif
+
+    {{-- Structural grid overlay, fading toward the edges so it frames the content rather than tiling flatly across it --}}
     <div
-        wire:ignore
-        class="absolute inset-0 z-0"
+        class="pointer-events-none absolute inset-0 z-[1]"
         aria-hidden="true"
-        x-data
-        x-init="
-            const cleanup = window.mountNebulaShader($el);
-            document.addEventListener('livewire:navigating', cleanup, { once: true });
+        style="
+            background-image:
+                linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse 75% 75% at 50% 45%, black 30%, transparent 85%);
+            -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 45%, black 30%, transparent 85%);
         "
     ></div>
 
