@@ -175,8 +175,21 @@
             {{ $slot }}
         </main>
 
-        <footer class="bg-primary">
-            <div class="mx-auto max-w-6xl px-4 py-10">
+        <footer class="relative overflow-hidden bg-primary">
+            <div
+                class="pointer-events-none absolute inset-0"
+                aria-hidden="true"
+                style="
+                    background-image:
+                        linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px);
+                    background-size: 44px 44px;
+                    mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 30%, transparent 85%);
+                    -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 50%, black 30%, transparent 85%);
+                "
+            ></div>
+
+            <div class="relative mx-auto max-w-6xl px-4 py-10">
                 <div class="grid gap-8 sm:grid-cols-3">
                     <div>
                         <p class="font-semibold text-white">{{ config('app.name') }}</p>
