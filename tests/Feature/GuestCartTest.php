@@ -22,6 +22,47 @@ class GuestCartTest extends TestCase
             ->assertSee('سلة الزوار');
     }
 
+    public function test_hero_shows_vendor_cart_and_product_stat_cards(): void
+    {
+        $vendor = \App\Models\User::factory()->create([
+            'role' => 'vendor',
+            'is_active' => true,
+            'application_status' => 'approved',
+        ]);
+        \App\Models\Product::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Test Product',
+            'description' => 'd',
+            'price' => 10,
+            'image_path' => 'products/p.jpg',
+            'status' => 'approved',
+        ]);
+        SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        SheinCart::create(['cart_name' => 'سلة أخرى', 'customer_phone' => '2', 'cart_details' => '']);
+
+        $html = Livewire::test('shein.hero')->html();
+
+        // 1 vendor, 1 product, 2 carts.
+        $this->assertStringContainsString('>1</p>', str_replace(["\n", ' '], '', $html));
+        $this->assertStringContainsString('>2</p>', str_replace(["\n", ' '], '', $html));
+        $this->assertStringContainsString('تاجر', $html);
+        $this->assertStringContainsString('سلة تم فتحها', $html);
+        $this->assertStringContainsString('منتج', $html);
+    }
+
+    public function test_hero_merchant_count_includes_approved_vendors_without_products(): void
+    {
+        \App\Models\User::factory()->create([
+            'role' => 'vendor',
+            'is_active' => true,
+            'application_status' => 'approved',
+        ]);
+
+        $html = Livewire::test('shein.hero')->html();
+
+        $this->assertStringContainsString('>1</p>', str_replace(["\n", ' '], '', $html));
+    }
+
     public function test_hero_writes_the_submitted_link_directly_into_the_designated_cart(): void
     {
         $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);

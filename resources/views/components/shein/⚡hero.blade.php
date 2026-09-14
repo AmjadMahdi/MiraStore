@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Product;
 use App\Models\Setting;
 use App\Models\SheinCart;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
@@ -91,12 +93,18 @@ new class extends Component
                 fn (string $path) => Storage::url($path),
                 Setting::getArray('hero_background_images', [])
             ),
+            'vendorsCount' => User::where('role', 'vendor')
+                ->where('is_active', true)
+                ->where('application_status', 'approved')
+                ->count(),
+            'cartsCount' => Setting::get('carts_opened_count') ?? SheinCart::count(),
+            'productsCount' => Product::where('status', 'approved')->count(),
         ];
     }
 };
 ?>
 
-<div class="relative flex min-h-[70vh] items-center overflow-hidden bg-primary px-4 py-12">
+<div wire:poll.30s class="relative flex min-h-[70vh] items-center overflow-hidden bg-primary px-4 py-12">
     @if (count($heroBackgroundImages) > 0)
         {{-- Admin-uploaded background image(s), cross-fading if there's more than one --}}
         <div
@@ -488,5 +496,20 @@ new class extends Component
             </div>
         </div>
         @endif
+
+        <div class="mt-8 grid grid-cols-3 gap-3 sm:gap-4">
+            <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-sm">
+                <p class="text-2xl font-bold text-white sm:text-3xl" style="font-variant-numeric: tabular-nums">{{ $vendorsCount }}</p>
+                <p class="mt-1 text-xs text-white sm:text-sm">{{ __('تاجر') }}</p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-sm">
+                <p class="text-2xl font-bold text-white sm:text-3xl" style="font-variant-numeric: tabular-nums">{{ $cartsCount }}</p>
+                <p class="mt-1 text-xs text-white sm:text-sm">{{ __('سلة تم فتحها') }}</p>
+            </div>
+            <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-sm">
+                <p class="text-2xl font-bold text-white sm:text-3xl" style="font-variant-numeric: tabular-nums">{{ $productsCount }}</p>
+                <p class="mt-1 text-xs text-white sm:text-sm">{{ __('منتج') }}</p>
+            </div>
+        </div>
     </div>
 </div>

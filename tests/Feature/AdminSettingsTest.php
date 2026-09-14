@@ -207,6 +207,29 @@ class AdminSettingsTest extends TestCase
         $this->assertSame('نص الشروط والأحكام التجريبي.', Setting::get('terms_and_conditions'));
     }
 
+    public function test_admin_can_manually_set_the_carts_opened_count(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->set('carts_opened_count', '500')
+            ->call('save')
+            ->assertSet('justSaved', true);
+
+        $this->assertSame('500', Setting::get('carts_opened_count'));
+    }
+
+    public function test_hero_shows_the_manually_set_carts_opened_count_instead_of_the_real_total(): void
+    {
+        \App\Models\SheinCart::create(['cart_name' => 'A', 'customer_phone' => '1', 'cart_details' => '']);
+        Setting::set('carts_opened_count', '999');
+
+        $html = Livewire::test('shein.hero')->html();
+
+        $this->assertStringContainsString('>999</p>', str_replace(["\n", ' '], '', $html));
+    }
+
     public function test_terms_page_shows_the_configured_text(): void
     {
         Setting::set('terms_and_conditions', 'نص الشروط والأحكام التجريبي.');

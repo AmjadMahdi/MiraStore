@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Models\SheinCart;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Livewire\Attributes\Validate;
@@ -25,6 +26,9 @@ new class extends Component
 
     #[Validate('nullable|string|max:20000')]
     public string $terms_and_conditions = '';
+
+    #[Validate('required|integer|min:0')]
+    public string $carts_opened_count = '0';
 
     /** @var array<int, string> */
     public array $hero_background_images = [];
@@ -52,6 +56,8 @@ new class extends Component
         $this->hero_background_images = Setting::getArray('hero_background_images', []);
 
         $this->terms_and_conditions = Setting::get('terms_and_conditions', '') ?? '';
+
+        $this->carts_opened_count = Setting::get('carts_opened_count') ?? (string) SheinCart::count();
     }
 
     public function addTitle(): void
@@ -120,6 +126,7 @@ new class extends Component
         Setting::set('hero_subtitle', $this->hero_subtitle);
         Setting::set('hero_button_text', $this->hero_button_text);
         Setting::set('terms_and_conditions', $this->terms_and_conditions !== '' ? $this->terms_and_conditions : null);
+        Setting::set('carts_opened_count', $this->carts_opened_count);
 
         $this->justSaved = true;
     }
@@ -259,6 +266,19 @@ new class extends Component
                     class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
                 >
                 @error('hero_button_text') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-ink-soft">عدد السلال المفتوحة</label>
+                <p class="mt-0.5 text-xs text-muted">الرقم الذي يظهر في بطاقة "سلة تم فتحها" بالواجهة الرئيسية — يمكنك تعديله يدوياً بالكيبورد.</p>
+                <input
+                    type="number"
+                    min="0"
+                    wire:model="carts_opened_count"
+                    dir="ltr"
+                    class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+                >
+                @error('carts_opened_count') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
         </div>
 
