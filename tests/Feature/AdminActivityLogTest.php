@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class AdminActivityLogTest extends TestCase
@@ -76,6 +77,32 @@ class AdminActivityLogTest extends TestCase
             ->test('admin.activity-log')
             ->set('eventFilter', 'deleted')
             ->assertSee('حذف');
+    }
+
+    public function test_admin_can_delete_selected_activity_log_entries(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+        $vendor = User::factory()->create(['role' => 'vendor']);
+
+        $product = Product::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Cute Tote',
+            'description' => 'desc',
+            'price' => 10,
+            'image_path' => 'products/tote.jpg',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($admin);
+        $product->update(['status' => 'approved']);
+
+        $activity = Activity::latest()->first();
+
+        Livewire::actingAs($admin)
+            ->test('admin.activity-log')
+            ->call('deleteSelected', [$activity->id]);
+
+        $this->assertDatabaseMissing('activity_log', ['id' => $activity->id]);
     }
 
     public function test_vendor_cannot_access_activity_log(): void

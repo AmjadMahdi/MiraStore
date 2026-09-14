@@ -709,9 +709,9 @@ class SheinCartTest extends TestCase
 
             public static function generateCartNumber(): string
             {
-                static::$calls++;
+                self::$calls++;
 
-                return static::$calls === 1 ? 'mira-11111' : 'mira-22222';
+                return self::$calls === 1 ? 'mira-11111' : 'mira-22222';
             }
         };
 

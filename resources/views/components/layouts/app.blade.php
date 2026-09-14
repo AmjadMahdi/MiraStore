@@ -22,6 +22,7 @@
             $seoDescription = $description ?? 'ميرا ستور: وسيط طلبات شي إن في تعز، اليمن، ومنصة إلكترونية لتجّار تعز لعرض وبيع منتجاتهم مباشرة عبر واتساب.';
             $seoCanonical = $canonical ?? url()->current();
             $seoType = $ogType ?? 'website';
+            $footerWhatsappLink = \App\Models\Setting::get('support_whatsapp_link');
         @endphp
 
         <meta charset="utf-8">
@@ -70,7 +71,7 @@
 
         @livewireStyles
     </head>
-    <body class="bg-white text-ink">
+    <body class="flex min-h-screen flex-col bg-white text-ink">
         <nav class="border-b border-line-medium bg-white">
             <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <div
@@ -170,7 +171,48 @@
             @endif
         @endauth
 
-        {{ $slot }}
+        <main class="flex-1">
+            {{ $slot }}
+        </main>
+
+        <footer class="bg-primary">
+            <div class="mx-auto max-w-6xl px-4 py-10">
+                <div class="grid gap-8 sm:grid-cols-3">
+                    <div>
+                        <p class="font-semibold text-white">{{ config('app.name') }}</p>
+                        <p class="mt-2 text-sm leading-relaxed text-white">
+                            {{ __('متجر ميرا: وسيطك المعتمد لطلبات شي إن في تعز، ومنصتك الإلكترونية المبتكرة لتسوق منتجات تجار تعز والطلب مباشرة عبر واتساب.') }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="text-sm font-semibold text-white">{{ __('روابط سريعة') }}</p>
+                        <ul class="mt-2 space-y-1.5 text-sm text-white">
+                            <li><a href="{{ route('home') }}" class="hover:underline">{{ __('الرئيسية') }}</a></li>
+                            <li><a href="{{ route('shein.index') }}" class="hover:underline">{{ __('اطلب من Shein') }}</a></li>
+                            <li><a href="{{ route('register') }}" class="hover:underline">{{ __('ابدأ البيع') }}</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="text-sm font-semibold text-white">{{ __('تواصل معنا') }}</p>
+                        <ul class="mt-2 space-y-1.5 text-sm text-white">
+                            @if ($footerWhatsappLink)
+                                <li>
+                                    <a href="{{ $footerWhatsappLink }}" target="_blank" class="hover:underline">
+                                        {{ __('تواصل عبر واتساب') }}
+                                    </a>
+                                </li>
+                            @endif
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="mt-8 border-t border-white/10 pt-6 text-center text-xs text-white">
+                    &copy; {{ now()->year }} {{ config('app.name') }}. {{ __('جميع الحقوق محفوظة.') }}
+                </p>
+            </div>
+        </footer>
 
         @livewireScripts
     </body>

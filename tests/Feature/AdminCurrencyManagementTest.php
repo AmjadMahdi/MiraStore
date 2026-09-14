@@ -7,6 +7,7 @@ use App\Models\Currency;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -126,7 +127,7 @@ class AdminCurrencyManagementTest extends TestCase
             ->set('currency_id', (string) $sar->id)
             ->set('description', 'desc')
             ->set('price', '50')
-            ->set('newImages', [\Illuminate\Http\UploadedFile::fake()->image('x.jpg')])
+            ->set('newImages', [UploadedFile::fake()->image('x.jpg')])
             ->call('save');
 
         $product = Product::where('name', 'Riyal Item')->first();
@@ -145,7 +146,7 @@ class AdminCurrencyManagementTest extends TestCase
             ->set('category_id', (string) $category->id)
             ->set('description', 'desc')
             ->set('price', '10')
-            ->set('newImages', [\Illuminate\Http\UploadedFile::fake()->image('x.jpg')])
+            ->set('newImages', [UploadedFile::fake()->image('x.jpg')])
             ->call('save')
             ->assertHasErrors('currency_id');
     }

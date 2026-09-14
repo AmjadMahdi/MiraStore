@@ -218,7 +218,7 @@ class VendorProductTest extends TestCase
         $product = Product::create([
             'vendor_id' => $vendor->id,
             'category_id' => $category->id,
-            'currency_id' => \App\Models\Currency::first()->id,
+            'currency_id' => Currency::first()->id,
             'name' => 'Old Sold Out Item',
             'description' => 'desc',
             'price' => 10,

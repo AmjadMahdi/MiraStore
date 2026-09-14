@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SheinCart;
 use App\Support\GuestCart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -49,7 +50,7 @@ class GuestCartTest extends TestCase
         $cart = SheinCart::create(['cart_name' => 'سلة الزوار', 'customer_phone' => '1', 'cart_details' => '']);
         $cart->enableSubmissions();
 
-        $this->expectException(\Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException::class);
+        $this->expectException(CannotUpdateLockedPropertyException::class);
 
         Livewire::test('shein.hero')->set('customerCountryCode', '+966');
     }

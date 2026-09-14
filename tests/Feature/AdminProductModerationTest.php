@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
+use App\Models\Currency;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -190,10 +192,10 @@ class AdminProductModerationTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'super_admin']);
         $product = $this->approvedProduct();
-        $category = \App\Models\Category::factory()->create();
-        $currency = \App\Models\Currency::first();
+        $category = Category::factory()->create();
+        $currency = Currency::first();
 
-        \Livewire\Livewire::actingAs($admin)
+        Livewire::actingAs($admin)
             ->test('vendor.product-form', ['product' => $product])
             ->set('name', 'Renamed Tote')
             ->set('category_id', (string) $category->id)
@@ -213,7 +215,7 @@ class AdminProductModerationTest extends TestCase
         $otherVendor = User::factory()->create(['role' => 'vendor']);
         $product = $this->pendingProduct();
 
-        \Livewire\Livewire::actingAs($otherVendor)
+        Livewire::actingAs($otherVendor)
             ->test('vendor.product-form', ['product' => $product])
             ->assertForbidden();
     }

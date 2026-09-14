@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\SheinCart;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -110,7 +111,7 @@ class AdminSettingsTest extends TestCase
         Setting::set('hero_subtitle', 'نص فرعي مخصص');
         Setting::set('hero_button_text', 'زر مخصص');
 
-        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart = SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
         $cart->enableSubmissions();
 
         $html = Livewire::test('shein.hero')->html();
@@ -170,7 +171,7 @@ class AdminSettingsTest extends TestCase
         Storage::disk('public')->put('hero/bg.jpg', 'fake-image-content');
         Setting::setArray('hero_background_images', ['hero/bg.jpg']);
 
-        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart = SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
         $cart->enableSubmissions();
 
         $html = Livewire::test('shein.hero')->html();
@@ -185,7 +186,7 @@ class AdminSettingsTest extends TestCase
 
     public function test_hero_uses_the_default_effect_when_no_background_images_are_set(): void
     {
-        $cart = \App\Models\SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
+        $cart = SheinCart::create(['cart_name' => 'سلة', 'customer_phone' => '1', 'cart_details' => '']);
         $cart->enableSubmissions();
 
         $html = Livewire::test('shein.hero')->html();

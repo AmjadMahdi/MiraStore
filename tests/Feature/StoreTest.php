@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\InteractionLog;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -298,8 +298,8 @@ class StoreTest extends TestCase
 
     public function test_homepage_shows_all_categories_as_tabs_and_filters_by_them(): void
     {
-        $shoes = \App\Models\Category::create(['name' => 'Shoes']);
-        $bags = \App\Models\Category::create(['name' => 'Bags']);
+        $shoes = Category::create(['name' => 'Shoes']);
+        $bags = Category::create(['name' => 'Bags']);
 
         $vendor = User::factory()->create(['role' => 'vendor']);
         $product = Product::create([
