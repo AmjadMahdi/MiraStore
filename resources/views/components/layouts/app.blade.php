@@ -22,7 +22,6 @@
             $seoDescription = $description ?? 'ميرا ستور: وسيط طلبات شي إن في تعز، اليمن، ومنصة إلكترونية لتجّار تعز لعرض وبيع منتجاتهم مباشرة عبر واتساب.';
             $seoCanonical = $canonical ?? url()->current();
             $seoType = $ogType ?? 'website';
-            $footerWhatsappLink = \App\Models\Setting::get('support_whatsapp_link');
         @endphp
 
         <meta charset="utf-8">
@@ -210,13 +209,16 @@
                     <div>
                         <p class="text-sm font-semibold text-white">{{ __('تواصل معنا') }}</p>
                         <ul class="mt-2 space-y-1.5 text-sm text-white">
-                            @if ($footerWhatsappLink)
-                                <li>
-                                    <a href="{{ $footerWhatsappLink }}" target="_blank" class="hover:underline">
-                                        {{ __('تواصل عبر واتساب') }}
-                                    </a>
-                                </li>
-                            @endif
+                            <li>
+                                <a href="https://wa.me/967785698740" target="_blank" class="hover:underline" dir="ltr">
+                                    +967 785698740
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://wa.me/966535271025" target="_blank" class="hover:underline" dir="ltr">
+                                    +966 53 527 1025
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
