@@ -23,6 +23,9 @@ new class extends Component
     #[Validate('required|string|max:100')]
     public string $hero_button_text = '';
 
+    #[Validate('nullable|string|max:20000')]
+    public string $terms_and_conditions = '';
+
     /** @var array<int, string> */
     public array $hero_background_images = [];
 
@@ -47,6 +50,8 @@ new class extends Component
         $this->hero_button_text = Setting::get('hero_button_text', '🔗 هاتي رابط المنتج هنا');
 
         $this->hero_background_images = Setting::getArray('hero_background_images', []);
+
+        $this->terms_and_conditions = Setting::get('terms_and_conditions', '') ?? '';
     }
 
     public function addTitle(): void
@@ -114,6 +119,7 @@ new class extends Component
         Setting::setArray('hero_titles', $this->hero_titles);
         Setting::set('hero_subtitle', $this->hero_subtitle);
         Setting::set('hero_button_text', $this->hero_button_text);
+        Setting::set('terms_and_conditions', $this->terms_and_conditions !== '' ? $this->terms_and_conditions : null);
 
         $this->justSaved = true;
     }
@@ -254,6 +260,19 @@ new class extends Component
                 >
                 @error('hero_button_text') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
             </div>
+        </div>
+
+        <div class="border-t border-line-medium pt-6">
+            <p class="text-sm font-semibold text-ink">الشروط والأحكام</p>
+            <p class="mt-0.5 text-xs text-muted">يظهر رابط لهذه الصفحة في تذييل الموقع. اتركها فارغة لإخفاء الرابط.</p>
+
+            <textarea
+                wire:model="terms_and_conditions"
+                rows="8"
+                placeholder="اكتب الشروط والأحكام هنا..."
+                class="mt-1.5 w-full rounded-lg border border-line-medium px-3.5 py-2.5 text-base focus:border-black focus:ring-1 focus:ring-black"
+            ></textarea>
+            @error('terms_and_conditions') <p class="mt-1 text-sm text-discount">{{ $message }}</p> @enderror
         </div>
 
         <button

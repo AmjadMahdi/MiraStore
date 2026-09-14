@@ -193,4 +193,42 @@ class AdminSettingsTest extends TestCase
 
         $this->assertStringContainsString('mountNebulaShader', $html);
     }
+
+    public function test_admin_can_set_the_terms_and_conditions_text(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin']);
+
+        Livewire::actingAs($admin)
+            ->test('admin.settings-form')
+            ->set('terms_and_conditions', 'نص الشروط والأحكام التجريبي.')
+            ->call('save')
+            ->assertSet('justSaved', true);
+
+        $this->assertSame('نص الشروط والأحكام التجريبي.', Setting::get('terms_and_conditions'));
+    }
+
+    public function test_terms_page_shows_the_configured_text(): void
+    {
+        Setting::set('terms_and_conditions', 'نص الشروط والأحكام التجريبي.');
+
+        $this->get(route('terms'))
+            ->assertOk()
+            ->assertSee('نص الشروط والأحكام التجريبي.');
+    }
+
+    public function test_terms_page_shows_a_fallback_message_when_empty(): void
+    {
+        $this->get(route('terms'))
+            ->assertOk()
+            ->assertSee('لم تتم إضافة الشروط والأحكام بعد.');
+    }
+
+    public function test_footer_only_links_to_terms_when_text_is_configured(): void
+    {
+        $this->get(route('home'))->assertDontSee('الشروط والأحكام');
+
+        Setting::set('terms_and_conditions', 'نص الشروط والأحكام التجريبي.');
+
+        $this->get(route('home'))->assertSee('الشروط والأحكام');
+    }
 }

@@ -22,6 +22,7 @@
             $seoDescription = $description ?? 'ميرا ستور: وسيط طلبات شي إن في تعز، اليمن، ومنصة إلكترونية لتجّار تعز لعرض وبيع منتجاتهم مباشرة عبر واتساب.';
             $seoCanonical = $canonical ?? url()->current();
             $seoType = $ogType ?? 'website';
+            $footerHasTerms = filled(\App\Models\Setting::get('terms_and_conditions'));
         @endphp
 
         <meta charset="utf-8">
@@ -203,6 +204,9 @@
                             <li><a href="{{ route('home') }}" class="hover:underline">{{ __('الرئيسية') }}</a></li>
                             <li><a href="{{ route('shein.index') }}" class="hover:underline">{{ __('اطلب من Shein') }}</a></li>
                             <li><a href="{{ route('register') }}" class="hover:underline">{{ __('ابدأ البيع') }}</a></li>
+                            @if ($footerHasTerms)
+                                <li><a href="{{ route('terms') }}" class="hover:underline">{{ __('الشروط والأحكام') }}</a></li>
+                            @endif
                         </ul>
                     </div>
 

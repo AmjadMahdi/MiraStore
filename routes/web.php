@@ -19,6 +19,7 @@ Route::get('/robots.txt', RobotsController::class)->name('robots');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::view('/', 'home')->name('home');
+Route::view('/terms', 'terms')->name('terms');
 
 Route::view('/shein', 'shein.index')->name('shein.index');
 Route::view('/cart', 'shein.cart')->name('shein.cart');
