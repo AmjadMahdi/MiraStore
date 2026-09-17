@@ -147,6 +147,7 @@
                                 'admin.vendors.index' => __('التجّار'),
                                 'admin.carts.index' => __('سلال Shein'),
                                 'admin.activity.index' => __('سجل النشاط'),
+                                'admin.statistics.index' => __('الإحصائيات'),
                                 'admin.settings.index' => __('الإعدادات'),
                             ];
 

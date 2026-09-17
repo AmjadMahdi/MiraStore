@@ -66,6 +66,7 @@ Route::middleware(['auth', 'role:super_admin,supervisor'])->prefix('admin')->nam
     Route::get('/vendors/{vendor}/edit', VendorEditController::class)->name('vendors.edit');
 
     Route::view('/activity', 'admin.activity')->name('activity.index');
+    Route::view('/statistics', 'admin.statistics')->name('statistics.index');
     Route::view('/settings', 'admin.settings')->name('settings.index');
 
     // Managing staff (System Administrator / System Supervisor) accounts is
